@@ -1,31 +1,184 @@
 package io.github.apfelcreme.MbPets;
 
+import io.github.apfelcreme.MbPets.Listener.ConvertRightclickListener;
+import io.github.apfelcreme.MbPets.Listener.EntityDamageListener;
+import io.github.apfelcreme.MbPets.Listener.EntityDamagesEntityListener;
+import io.github.apfelcreme.MbPets.Listener.EntityInteractListener;
+import io.github.apfelcreme.MbPets.Listener.EntityRightClickListener;
+import io.github.apfelcreme.MbPets.Listener.NetherPortalEnterListener;
+import io.github.apfelcreme.MbPets.Listener.PlayerLogoutListener;
+import io.github.apfelcreme.MbPets.Pets.AngelPet;
+import io.github.apfelcreme.MbPets.Pets.ChickenPet;
+import io.github.apfelcreme.MbPets.Pets.CowPet;
+import io.github.apfelcreme.MbPets.Pets.DroppedItemPet;
+import io.github.apfelcreme.MbPets.Pets.DevilPet;
+import io.github.apfelcreme.MbPets.Pets.EndermanPet;
+import io.github.apfelcreme.MbPets.Pets.FallingBlockPet;
+import io.github.apfelcreme.MbPets.Pets.HorsePet;
+import io.github.apfelcreme.MbPets.Pets.IronGolemPet;
+import io.github.apfelcreme.MbPets.Pets.MagmaCubePet;
+import io.github.apfelcreme.MbPets.Pets.MooshroomPet;
+import io.github.apfelcreme.MbPets.Pets.OcelotPet;
+import io.github.apfelcreme.MbPets.Pets.Pet;
+import io.github.apfelcreme.MbPets.Pets.PigPet;
+import io.github.apfelcreme.MbPets.Pets.RabbitPet;
+import io.github.apfelcreme.MbPets.Pets.SheepPet;
+import io.github.apfelcreme.MbPets.Pets.SkeletonHorsePet;
+import io.github.apfelcreme.MbPets.Pets.SlimePet;
+import io.github.apfelcreme.MbPets.Pets.UndeadHorsePet;
+import io.github.apfelcreme.MbPets.Pets.WolfPet;
+
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
-import me.libraryaddict.disguise.LibsDisguises;
+import java.util.Map.Entry;
+
 import net.milkbowl.vault.Vault;
 import net.milkbowl.vault.economy.Economy;
 import net.zaiyers.AnimalProtect.AnimalProtect;
 import net.zaiyers.bukkit.UUIDDB.UUIDDB;
 
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Wolf;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityInteractEvent;
-import org.bukkit.event.entity.EntityPortalEnterEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class MbPets extends JavaPlugin implements Listener {
+/**
+ * MbPets 
+ * Copyright (C) 2015 Lord36 aka Apfelcreme
+ * 
+ * This program is free software;
+ * you can redistribute it and/or modify it under the terms of the GNU General
+ * Public License as published by the Free Software Foundation; either version 3
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, see <http://www.gnu.org/licenses/>.
+ * 
+ * @author Lord36 aka Apfelcreme
+ * 
+ */
+public class MbPets extends JavaPlugin {
 
 	/**
-	 * returns instance
+	 * a {@link HashMap} which contains players with their currently spawned
+	 * pets
+	 */
+	private HashMap<Player, Pet> pets;
+
+	/**
+	 * a {@link HashMap} which contains all current configurations (= Pets which
+	 * are currently in configuration and not yet spawned nor confirmed)
+	 */
+	private HashMap<Player, Pet> configurations;
+
+	/**
+	 * the instance of the {@link UUIDDB} plugin
+	 */
+	private UUIDDB pluginUuidDb = null;
+
+	/**
+	 * the instance of the {@link AnimalProtect} plugin
+	 */
+	private AnimalProtect pluginAnimalProtect = null;
+
+	/**
+	 * the instance of the {@link Vault} plugin
+	 */
+	private Vault pluginVault = null;
+
+	/**
+	 * the event listener for the animal2Pet converting
+	 */
+	private ConvertRightclickListener convertRightclickListener;
+
+	public void onEnable() {
+		//set enabled on plugin load
+		getConfig().set("enabled", true);
+		saveConfig();
+		// create config if necessary
+		if (!getDataFolder().exists()) {
+			getDataFolder().mkdir();
+			getConfig().set("mysql.dbuser", "");
+			getConfig().set("mysql.dbpassword", "");
+			getConfig().set("mysql.database", "");
+			getConfig().set("mysql.url", "");
+			MbPetsConfig.init();
+			getLogger()
+					.severe("Bitte die Datenbank-Informationen in die config.yml eintragen");
+			saveConfig();
+		}
+		
+		// initialize some lists
+		pets = new HashMap<Player, Pet>();
+		configurations = new HashMap<Player, Pet>();
+		convertRightclickListener = new ConvertRightclickListener();
+
+		// register commands and listener
+		getServer().getPluginCommand("pet").setExecutor(new MbPetsCommand());
+		getServer().getPluginCommand("pet").setTabCompleter(
+				new MbPetsTabCompleter());
+		getServer().getPluginManager().registerEvents(
+				convertRightclickListener, this);
+		getServer().getPluginManager().registerEvents(
+				new EntityDamageListener(), this);
+		getServer().getPluginManager().registerEvents(
+				new EntityInteractListener(), this);
+		getServer().getPluginManager().registerEvents(
+				new NetherPortalEnterListener(), this);
+		getServer().getPluginManager().registerEvents(
+				new PlayerLogoutListener(), this);
+		getServer().getPluginManager().registerEvents(
+				new EntityRightClickListener(), this);
+		getServer().getPluginManager().registerEvents(
+				new EntityDamagesEntityListener(), this);
+
+		// initialize the db connection
+		DatabaseConnectionManager.getInstance().initConnection(
+				getConfig().getString("mysql.dbuser"),
+				getConfig().getString("mysql.dbpassword"),
+				getConfig().getString("mysql.database"),
+				getConfig().getString("mysql.url"));
+
+		// get the plugin instances
+		if (getServer().getPluginManager().getPlugin("UUIDDB") != null) {
+			pluginUuidDb = (UUIDDB) getServer().getPluginManager().getPlugin(
+					"UUIDDB");
+		}
+		if (getServer().getPluginManager().getPlugin("AnimalProtect") != null) {
+			pluginAnimalProtect = (AnimalProtect) getServer()
+					.getPluginManager().getPlugin("AnimalProtect");
+		}
+		if (getServer().getPluginManager().getPlugin("Vault") != null) {
+			pluginVault = (Vault) getServer().getPluginManager().getPlugin(
+					"Vault");
+		}
+
+	}
+
+	public void onDisable() {
+		try {
+			DatabaseConnectionManager.getInstance().getConnection().close();
+		} catch (SQLException e) {
+		}
+		for (Entry<Player, Pet> entry : getPets().entrySet()) {
+			if (entry.getValue().getEntity() != null) {
+				entry.getValue().getEntity().remove();
+			}
+		}
+	}
+
+	/**
+	 * returns the plugin instance
 	 * 
 	 * @return
 	 */
@@ -34,58 +187,46 @@ public class MbPets extends JavaPlugin implements Listener {
 				.getPlugin("MbPets");
 	}
 
-	ConvertRightClickListener convertRightClickListener;
-	Connection dbConnection;
-	boolean dbIsCurrentlyAvailable;
-
-	HashMap<Player, Pet> pets;
-
-	AnimalProtect pluginAnimalProtect;
-	LibsDisguises pluginLibsDisguises;
-
-	UUIDDB pluginUuidDb;
-	Vault pluginVault;
-
-	HashMap<Player, Pet> preparedPets;
-
 	/**
-	 * adds a pet to the List
+	 * @return the pets
 	 */
-	public void addPet(Pet pet) {
-		pets.put(pet.getOwner().getPlayer(), pet);
+	public HashMap<Player, Pet> getPets() {
+		return pets;
 	}
 
 	/**
-	 * cancels all interacts on entities
-	 * @param e
+	 * @return the configurations
 	 */
-	@EventHandler
-	public void onEntityInteract(EntityInteractEvent e) {
-		if (getPets().containsValue(getPetByEntity(e.getEntity()))) {
-			// a pet is rightclicked
-			e.setCancelled(true);
-		}
-	}
-	
-	/**
-	 * adds a pet to the List
-	 */
-	public void addPreparedPet(Pet pet) {
-		preparedPets.put(pet.getOwner().getPlayer(), pet);
+	public HashMap<Player, Pet> getConfigurations() {
+		return configurations;
 	}
 
 	/**
-	 * @return the convertRightClickListener
+	 * @return the convertRightclickListener
 	 */
-	public ConvertRightClickListener getConvertRightClickListener() {
-		return convertRightClickListener;
+	public ConvertRightclickListener getConvertRightclickListener() {
+		return convertRightclickListener;
 	}
 
 	/**
-	 * @return the dbConnection
+	 * @return the pluginUuidDb
 	 */
-	public Connection getDbConnection() {
-		return dbConnection;
+	public UUIDDB getPluginUuidDb() {
+		return pluginUuidDb;
+	}
+
+	/**
+	 * @return the pluginAnimalProtect
+	 */
+	public AnimalProtect getPluginAnimalProtect() {
+		return pluginAnimalProtect;
+	}
+
+	/**
+	 * @return the pluginUuidDb
+	 */
+	public Vault getPluginVault() {
+		return pluginVault;
 	}
 
 	/**
@@ -105,258 +246,159 @@ public class MbPets extends JavaPlugin implements Listener {
 	}
 
 	/**
-	 * returns a pet from the list
+	 * retrieves information from the database and stores it into a {@link Pet}
+	 * object. should only be accessed from an asynchronous task
 	 * 
 	 * @param player
+	 * @param number
+	 * @return
+	 * @throws SQLException
+	 */
+	public Pet getPet(OfflinePlayer player, Integer number) throws SQLException {
+		if (number == null || player == null) {
+			return null;
+		}
+		PreparedStatement statement;
+		ResultSet res;
+		Connection connection = DatabaseConnectionManager.getInstance()
+				.getConnection();
+		statement = connection
+				.prepareStatement("SELECT * FROM MbPets_Pet WHERE playerid = (Select playerid from MbPets_Player where uuid = ?) and number = ? ");
+		statement.setString(1, player.getUniqueId().toString());
+		statement.setInt(2, number);
+		res = statement.executeQuery();
+		Pet pet = null;
+		if (res.first()) { 
+			switch (MbPetsConfig.parseType(res.getString("type"))) {
+			case CHICKEN:
+				pet = new ChickenPet(player, res.getString("petname"), number,
+						res.getBoolean("baby"));
+				break;
+			case COW:
+				pet = new CowPet(player, res.getString("petname"), number,
+						res.getBoolean("baby"));
+				break;
+			case DROPPED_ITEM:
+				switch (MbPetsConfig.parseMaterial(res.getString("material"))) {
+				case OBSIDIAN:
+					pet = new DevilPet(player, res.getString("petname"), number);
+					break;
+				case SNOW_BLOCK:
+					pet = new AngelPet(player, res.getString("petname"), number);
+					break;
+				default:
+					pet = new DroppedItemPet(player, res.getString("petname"),
+							number, MbPetsConfig.parseMaterial(res.getString("material")));
+					break;
+				}
+				break;
+			case ENDERMAN: 
+				pet = new EndermanPet(player, res.getString("petname"), number);
+				break;
+			case FALLING_BLOCK:
+				pet = new FallingBlockPet(player, res.getString("petname"), number, 
+						MbPetsConfig.parseBlock(res.getString("block")));
+				break;
+			case HORSE:
+				pet = new HorsePet(player, res.getString("petname"), number,
+						res.getBoolean("baby"),
+						MbPetsConfig.parseHorseColor(res.getString("horsecolor")),
+						MbPetsConfig.parseHorseStyle(res.getString("horsestyle")));
+				break;
+			case IRON_GOLEM:
+				pet = new IronGolemPet(player, res.getString("petname"), number);
+				break;
+			case MAGMA_CUBE:
+				pet = new MagmaCubePet(player, res.getString("petname"), number, res.getInt("size"));
+				break;
+			case MUSHROOM_COW:
+				pet = new MooshroomPet(player, res.getString("petname"),
+						number, res.getBoolean("baby"));
+				break;
+			case OCELOT:
+				pet = new OcelotPet(player, res.getString("petname"), number,
+						res.getBoolean("baby"),
+						MbPetsConfig.parseOcelotType(res.getString("ocelotstyle")));
+				break;
+			case PIG:
+				pet = new PigPet(player, res.getString("petname"), number,
+						res.getBoolean("baby"));
+				break;
+			case RABBIT:
+				pet = new RabbitPet(player, res.getString("petname"), number,
+						res.getBoolean("baby"),
+						MbPetsConfig.parseRabbitType(res.getString("rabbittype")));
+				break;
+			case SLIME:
+				pet = new SlimePet(player, res.getString("petname"), number, res.getInt("size"));
+				break;
+			case SHEEP:
+				pet = new SheepPet(player, res.getString("petname"), number,
+						res.getBoolean("baby"),
+						MbPetsConfig.parseColor(res.getString("sheepcolor")));
+				break;
+			case SKELETON_HORSE:
+				pet = new SkeletonHorsePet(player, res.getString("petname"),
+						number, res.getBoolean("baby"));
+				break;
+			case UNDEAD_HORSE:
+				pet = new UndeadHorsePet(player, res.getString("petname"),
+						number, res.getBoolean("baby"));
+				break;
+			case WOLF:
+				pet = new WolfPet(player, res.getString("petname"), number,
+						res.getBoolean("baby"),
+						MbPetsConfig.parseColor(res.getString("wolfcolor")));
+				break;
+			default:
+			}
+			connection.close();
+			return pet;
+		} else {
+			return null;
+		}
+	}
+	
+	/**
+	 * returns the pet object of the given entity or null if the entity isnt a
+	 * pet
+	 * 
+	 * @param entity
 	 * @return
 	 */
-	public Pet getPet(Player player) {
-		return pets.get(player);
-	}
-
 	public Pet getPetByEntity(Entity entity) {
-		for (Pet p : pets.values()) {
-			if (p.getEntity().equals(entity)) {
-				return p;
+		for (Entry<Player, Pet> petEntry : getPets().entrySet()) {
+			if (petEntry.getValue().getEntity().equals(entity)) {
+				return petEntry.getValue();
 			}
 		}
 		return null;
 	}
 
 	/**
-	 * @return the pets
-	 */
-	public HashMap<Player, Pet> getPets() {
-		return pets;
-	}
-
-	/**
-	 * @return the pluginAnimalProtect
-	 */
-	public AnimalProtect getPluginAnimalProtect() {
-		return pluginAnimalProtect;
-	}
-
-	/**
-	 * @return the pluginLibsDisguises
-	 */
-	public LibsDisguises getPluginLibsDisguises() {
-		return pluginLibsDisguises;
-	}
-
-	/**
-	 * @return the pluginUuidDb
-	 */
-	public UUIDDB getPluginUuidDb() {
-		return pluginUuidDb;
-	}
-
-	/**
-	 * @return the pluginVault
-	 */
-	public Vault getPluginVault() {
-		return pluginVault;
-	}
-
-	/**
-	 * returns a pet from the list
+	 * returns the number of pets the given player owns. access only from an
+	 * asychronous task
 	 * 
-	 * @param player
+	 * @param owner
 	 * @return
 	 */
-	public Pet getPreparedPet(Player player) {
-		return preparedPets.get(player);
-	}
-
-	/**
-	 * @return the preparedPets
-	 */
-	public HashMap<Player, Pet> getPreparedPets() {
-		return preparedPets;
-	}
-
-	/**
-	 * @return the dbIsCurrentlyAvailable
-	 */
-	public boolean isDbIsCurrentlyAvailable() {
-		return dbIsCurrentlyAvailable;
-	}
-
-	/**
-	 * closes the db connection
-	 */
-	@Override
-	public void onDisable() {
-		if (!getConfig().getString("mysql.dbuser").isEmpty()
-				&& !getConfig().getString("mysql.dbpassword").isEmpty()
-				&& !getConfig().getString("mysql.database").isEmpty()
-				&& !getConfig().getString("mysql.url").isEmpty()) {
-			try {
-				DatabaseConnectionManager.getInstance().getConnection().close();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
+	public static int getLatestPetNumber(OfflinePlayer owner) {
+		int ret = 0;
+		try {
+			Connection connection = DatabaseConnectionManager.getInstance()
+					.getConnection();
+			PreparedStatement statement = connection
+					.prepareStatement("Select max(number) as number from MbPets_Pet where playerid = (SELECT playerid from MbPets_Player where uuid = ?)");
+			statement.setString(1, owner.getUniqueId().toString());
+			ResultSet res = statement.executeQuery();
+			ret = (res.first() && res.getString("number") != null ? res
+					.getInt("number") : 0);
+			statement.close();
+			connection.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
-		for (Pet pet : pets.values()) {
-			pet.getEntity().remove();
-		}
-		pets.clear();
-		preparedPets.clear();
-	}
-
-	/**
-	 * onEnable
-	 */
-	@Override
-	public void onEnable() {
-		pets = new HashMap<Player, Pet>();
-		preparedPets = new HashMap<Player, Pet>();
-		if (!getDataFolder().exists()) {
-			getDataFolder().mkdir();
-			getConfig().set("mysql.dbuser", "");
-			getConfig().set("mysql.dbpassword", "");
-			getConfig().set("mysql.database", "");
-			getConfig().set("mysql.url", "");
-			getLogger()
-					.severe("Bitte die Datenbank-Informationen in die config.yml eintragen");
-			saveConfig();
-			MbPetsUtils.init();
-			getPluginLoader().disablePlugin(this);
-			return;
-		}
-		dbConnection = DatabaseConnectionManager.getInstance().initConnection(
-				getConfig().getString("mysql.dbuser", ""),
-				getConfig().getString("mysql.dbpassword", ""),
-				getConfig().getString("mysql.database", ""),
-				getConfig().getString("mysql.url", ""));
-		if (dbConnection == null) {
-			getLogger().severe("Database connection could not be established");
-		}
-		pluginUuidDb = (UUIDDB) getServer().getPluginManager().getPlugin(
-				"UUIDDB");
-		if (pluginUuidDb == null) {
-			getLogger().severe(
-					"Plugin UUIDDB fehlt!. Plugin wurde nicht aktiviert.");
-			getServer().getPluginManager().disablePlugin(this);
-		}
-		pluginLibsDisguises = (LibsDisguises) getServer().getPluginManager()
-				.getPlugin("LibsDisguises");
-		if (pluginLibsDisguises == null) {
-			getLogger()
-					.severe("Plugin LibsDisguises fehlt!. Plugin wurde nicht aktiviert.");
-			getServer().getPluginManager().disablePlugin(this);
-		}
-		pluginVault = (Vault) getServer().getPluginManager().getPlugin("Vault");
-		if (pluginVault == null) {
-			getLogger()
-					.warning(
-							"Plugin Vault fehlt! Das Kaufen und Converten von Pets wird auf diesem Server nicht funktionieren!");
-		}
-
-		pluginAnimalProtect = (AnimalProtect) getServer().getPluginManager()
-				.getPlugin("AnimalProtect");
-		if (pluginAnimalProtect == null) {
-			getLogger().warning("Plugin AnimalProtect fehlt!");
-		}
-		getServer().getPluginCommand("pet").setExecutor(new MbPetsCommand());
-		getServer().getPluginManager().registerEvents(this, this);
-		convertRightClickListener = new ConvertRightClickListener();
-		getServer().getPluginManager().registerEvents(
-				convertRightClickListener, this);
-	}
-
-	/**
-	 * removes Entity from the activePets-List when going through a Nether
-	 * Portal bc this caused some kind of endless replication bug...
-	 * 
-	 * @param event
-	 */
-	@EventHandler
-	public void onEnterNetherPortal(EntityPortalEnterEvent event) {
-		if (event.getEntity() instanceof Wolf) {// all pets are disguised wolves
-			if (getPetByEntity(event.getEntity()) != null) {
-				// a pet ran through a portal
-				getPetByEntity(event.getEntity()).getEntity().remove();
-				removePet(getPetByEntity(event.getEntity()));
-			}
-		}
-	}
-
-	/**
-	 * cancels all damage events to make pets invulnerable
-	 * 
-	 * @param event
-	 */
-	@EventHandler
-	public void onEntityDamage(EntityDamageEvent event) {
-		if (getPetByEntity(event.getEntity()) != null) {
-			event.setCancelled(true);
-		}
-	}
-
-	/**
-	 * removes active pets on player logout
-	 * 
-	 * @param e
-	 */
-	@EventHandler
-	public void onLogout(PlayerQuitEvent e) {
-		if (pets.containsKey(e.getPlayer())) {
-			getPet(e.getPlayer()).getEntity().remove();
-			pets.remove(e.getPlayer());
-		}
-	}
-
-	/**
-	 * removes a pet from the list
-	 * 
-	 * @param pet
-	 */
-	public void removePet(Pet pet) {
-		pets.remove(pet.getOwner().getPlayer());
-	}
-
-	/**
-	 * removes a pet from the list
-	 * 
-	 * @param player
-	 */
-	public void removePet(Player player) {
-		pets.remove(player);
-	}
-
-	/**
-	 * removes a pet from the list
-	 * 
-	 * @param pet
-	 */
-	public void removePreparedPet(Pet pet) {
-		preparedPets.remove(pet.getOwner().getPlayer());
-	}
-
-	/**
-	 * removes a pet from the list
-	 * 
-	 * @param player
-	 */
-	public void removePreparedPet(Player player) {
-		preparedPets.remove(player);
-	}
-
-	/**
-	 * @param dbConnection
-	 *            the dbConnection to set
-	 */
-	public void setDbConnection(Connection dbConnection) {
-		this.dbConnection = dbConnection;
-	}
-
-	/**
-	 * @param dbIsCurrentlyAvailable
-	 *            the dbIsCurrentlyAvailable to set
-	 */
-	public void setDbIsCurrentlyAvailable(boolean dbIsCurrentlyAvailable) {
-		this.dbIsCurrentlyAvailable = dbIsCurrentlyAvailable;
+		return ret;
 	}
 
 }

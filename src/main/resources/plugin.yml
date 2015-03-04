@@ -1,5 +1,5 @@
 name: MbPets
-version: 1.5
+version: 2.2
 main: io.github.apfelcreme.MbPets.MbPets
 depend: [LibsDisguises, UUIDDB]
 softdepend: [AnimalProtect, Vault]
@@ -26,18 +26,22 @@ permissions:
       MbPets.modify: true
       MbPets.convert: true
       MbPets.print: true
+      MbPets.sell: true
   MbPets.moderator:
-    description: unregister, monitor, reload
+    description: unregister, monitor, reload, regenerate, despawn
     children:
       MbPets.user: true
       MbPets.delete: true
       MbPets.monitor: true
       MbPets.reload: true
       MbPets.regenerate: true
+      MbPets.despawn: true
   MbPets.call:
     description: call & uncall pets
   MbPets.buy:
     description: buy & confirm pets
+  MbPets.sell:
+    description: sell pets
   MbPets.modify:
     description: modify pets
   MbPets.convert:
@@ -46,6 +50,8 @@ permissions:
     description: print stuff
   MbPets.delete:
     description: delete pets
+  MbPets.despawn:
+    description: despawn all currently called pets
   MbPets.monitor:
     description: monitor some stuff
   MbPets.reload:

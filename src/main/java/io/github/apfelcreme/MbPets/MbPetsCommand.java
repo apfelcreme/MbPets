@@ -1,62 +1,193 @@
 package io.github.apfelcreme.MbPets;
 
-import io.github.apfelcreme.MbPets.MbPetsUtils.Keys;
-
 import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
+import java.util.Map.Entry;
 import java.util.UUID;
 
+import io.github.apfelcreme.MbPets.ChatInput.Operation;
+import io.github.apfelcreme.MbPets.Interfaces.Ageable;
+import io.github.apfelcreme.MbPets.Interfaces.DroppedItem;
+import io.github.apfelcreme.MbPets.Interfaces.FallingBlock;
+import io.github.apfelcreme.MbPets.Interfaces.Sizeable;
+import io.github.apfelcreme.MbPets.Pets.AngelPet;
+import io.github.apfelcreme.MbPets.Pets.ChickenPet;
+import io.github.apfelcreme.MbPets.Pets.CowPet;
+import io.github.apfelcreme.MbPets.Pets.DroppedItemPet;
+import io.github.apfelcreme.MbPets.Pets.DevilPet;
+import io.github.apfelcreme.MbPets.Pets.FallingBlockPet;
+import io.github.apfelcreme.MbPets.Pets.HorsePet;	
+import io.github.apfelcreme.MbPets.Pets.IronGolemPet;
+import io.github.apfelcreme.MbPets.Pets.MagmaCubePet;
+import io.github.apfelcreme.MbPets.Pets.MooshroomPet;
+import io.github.apfelcreme.MbPets.Pets.OcelotPet;
+import io.github.apfelcreme.MbPets.Pets.Pet;
+import io.github.apfelcreme.MbPets.Pets.PigPet;
+import io.github.apfelcreme.MbPets.Pets.RabbitPet;
+import io.github.apfelcreme.MbPets.Pets.SheepPet;
+import io.github.apfelcreme.MbPets.Pets.SkeletonHorsePet;
+import io.github.apfelcreme.MbPets.Pets.SlimePet;
+import io.github.apfelcreme.MbPets.Pets.UndeadHorsePet;
+import io.github.apfelcreme.MbPets.Pets.WolfPet;
 import me.libraryaddict.disguise.disguisetypes.DisguiseType;
+import net.milkbowl.vault.economy.EconomyResponse;
+
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.WordUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.bukkit.ChatColor;
-import org.bukkit.OfflinePlayer;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-public class MbPetsCommand implements CommandExecutor, TabCompleter {
+public class MbPetsCommand implements CommandExecutor {
 
-	MbPets plugin;
-
-	public MbPetsCommand() {
-		plugin = MbPets.getInstance();
+	@Override
+	public boolean onCommand(CommandSender commandSender, Command cmd,
+			String lbl, String[] args) {
+		if (commandSender instanceof Player) {
+			if (MbPets.getInstance().getConfig().getBoolean("enabled")) {
+				Player sender = (Player) commandSender;
+				if (cmd.getName().equalsIgnoreCase("pet")) {
+					ChatInput chatInput = explodeChatInput(args, sender);
+					if (chatInput != null) {
+						switch (chatInput.getOperation()) {
+						case BABY:
+						case COLOR:
+						case STYLE:
+						case SIZE:
+						case TYPE:
+						case NAME:
+							createPet(chatInput);
+							break;
+						case CALL:
+							callPet(chatInput);
+							break;
+						case CANCEL:
+							cancelPreparation(sender);
+							break;
+						case CONFIRM:
+							confirmPet(chatInput);
+							break;
+						case CONVERT:
+							registerConvert(sender);
+							break;
+						case DELETE:
+							deletePet(chatInput);
+							break;
+						case DESPAWN:
+							despawnPet(chatInput);
+							break;
+						case FLUSH:
+							flushPets(chatInput);
+							break;
+						case HELP:
+							printHelp(chatInput);
+							break;
+						case INFO:
+							printInfo(chatInput);
+							break;
+						case LIST:
+							printList(chatInput);
+							break;
+						case MODIFY:
+							modifyPet(chatInput);
+							break;
+						case MONITOR:
+							printMonitor(sender);
+							break;
+						case REGENERATE:
+							regenerateConfig(sender);
+							break;
+						case RELOAD:
+							reloadConfig(sender);
+							break;
+						case SELL:
+							sellPet(chatInput);
+							break;
+						case STATUS:
+							printStatus(sender);
+							break;
+						case UNCALL:
+							uncallPet(sender);
+							break;
+						default:
+							break;
+						}
+					}
+				}
+			} else {
+				commandSender.sendMessage(ChatColor.RED+"Das Plugin wurde bis zum n‰chsten Serverneustart deaktiviert! Das heiﬂt auch, dass es bald etwas neues gibt ;)");
+			}
+		}
+		return false;
 	}
 
 	/**
-	 * calls the wanted pet.
+	 * adds a convert-request that lasts for 10 seconds
 	 * 
-	 * @param argsMap
 	 * @param player
-	 * @throws SQLException
 	 */
-	private void callPet(HashMap<MbPetsUtils.Keys, String> argsMap,
-			Player player) throws SQLException {
-		Connection con = DatabaseConnectionManager.getInstance()
-				.getConnection();
-		if (!player.hasPermission("MbPets.call")) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPermission"));
+	private void registerConvert(Player sender) {
+
+		if (!sender.hasPermission("MbPets.convert")) {
+			sender.sendMessage(MbPetsConfig.getTextNode("error.noPermission"));
 			return;
 		}
-		if (con == null) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noDbConnection"));
+		if (MbPets.getInstance().getPluginAnimalProtect() == null) {
 			return;
 		}
-		Pet pet = new Pet();
-		pet.setNumber(argsMap.get(MbPetsUtils.Keys.NUMBER) != null ? Integer
-				.parseInt(argsMap.get(MbPetsUtils.Keys.NUMBER)) : (MbPetsUtils
-				.getNumberOfPets(player)));
-		pet.call(player);
+		MbPets.getInstance().getConvertRightclickListener().addConvert(sender);
+
+	}
+
+	/**
+	 * calls a pet
+	 * 
+	 * @param chatInput
+	 * @return
+	 */
+	private void callPet(final ChatInput chatInput) {
+		MbPets.getInstance().getServer().getScheduler()
+				.runTaskAsynchronously(MbPets.getInstance(), new Runnable() {
+
+					@Override
+					public void run() {
+						Connection connection = DatabaseConnectionManager.getInstance()
+								.getConnection();
+						if (!chatInput.getSender().getPlayer().hasPermission("MbPets.call")) {
+							chatInput.getSender().getPlayer()
+									.sendMessage(MbPetsConfig.getTextNode("error.noPermission"));
+							return;
+						}
+						if (connection == null) {
+							chatInput.getSender().getPlayer()
+									.sendMessage(MbPetsConfig.getTextNode("error.noDbConnection"));
+							return;
+						}
+						try {
+							Integer number;
+							if (chatInput.getNumber() == null) {
+								number = MbPets.getLatestPetNumber(chatInput
+										.getSender());
+							} else {
+								number = chatInput.getNumber();
+							}
+							Pet pet = MbPets.getInstance().getPet(
+									chatInput.getSender(), number);
+							if (pet != null) {
+								pet.spawn();
+							}
+							connection.close();
+						} catch (SQLException e) {
+							e.printStackTrace();
+						}
+					}
+				});
 	}
 
 	/**
@@ -68,476 +199,904 @@ public class MbPetsCommand implements CommandExecutor, TabCompleter {
 	 */
 	private void cancelPreparation(Player player) {
 		if (!player.hasPermission("MbPets.buy")) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPermission"));
+			player.sendMessage(MbPetsConfig.getTextNode("error.noPermission"));
 			return;
 		}
-		if (MbPets.getInstance().getPreparedPets().containsKey(player)) {
-			MbPets.getInstance().getPreparedPets().remove(player);
-			player.sendMessage(MbPetsUtils
-					.getTextNode("info.preparedPetCanceled"));
+		if (MbPets.getInstance().getConfigurations().containsKey(player)) {
+			MbPets.getInstance().getConfigurations().remove(player);
+			player.sendMessage(MbPetsConfig.getTextNode("info.preparedPetCanceled"));
 		} else {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPreparedPets"));
+			player.sendMessage(MbPetsConfig.getTextNode("error.noPreparedPets"));
 		}
 
 	}
 
 	/**
-	 * finishes the confirming process and enters the pet into the database
+	 * confirms a configured pet
 	 * 
-	 * @param argsMap
-	 *            the chat input in a HashMap<MbPetUtils.Keys, String)
-	 * @param player
-	 *            or commandSender
-	 * @throws SQLException
+	 * @param chatInput
 	 */
-	private void confirmPet(HashMap<MbPetsUtils.Keys, String> argsMap,
-			Player player) throws SQLException {
-		Connection con = DatabaseConnectionManager.getInstance()
+	private void confirmPet(ChatInput chatInput) {
+		Connection connection = DatabaseConnectionManager.getInstance()
 				.getConnection();
-		if (!player.hasPermission("MbPets.confirm")) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPermission"));
+		if (!chatInput.getSender().hasPermission("MbPets.confirm")) {
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("error.noPermission"));
 			return;
 		}
-		if (con == null) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noDbConnection"));
+		if (connection == null) {
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("error.noDbConnection"));
 			return;
 		}
 		if (MbPets.getInstance().getPluginVault() == null) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noVault"));
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("error.noVault"));
 			return;
 		}
-		Pet pet = MbPets.getInstance().getPreparedPet(player);
+		if (!MbPets.getInstance().getEconomy().hasAccount(chatInput.getSender())) {
+			return;
+		}
+//		Pet currentlySpawnedPet = MbPets.getInstance().getPets().get(chatInput.getSender());
+//		if (currentlySpawnedPet != null) {
+//			currentlySpawnedPet.uncall();
+//		}
+		Pet pet = MbPets.getInstance().getConfigurations()
+				.get(chatInput.getSender());
 		if (pet != null) {
-			System.out.println(pet.toString());
-			if (!pet.isModified()) {
-				pet.setNumber(argsMap.get(MbPetsUtils.Keys.NUMBER) != null ? Integer
-						.parseInt(argsMap.get(MbPetsUtils.Keys.NUMBER))
-						: (MbPetsUtils.getNumberOfPets(player) + 1));
-			}
 			if (pet.isConfigurationFinished()) {
-				if (pet.getEntity() != null) {
-					// if the to-spawn entity is a requested convert, the "old"
-					// entity is stored in pet.entity.
-					// it gets despawned now
-					if (MbPets.getInstance().getPluginAnimalProtect() != null) {
-						if (MbPets
-								.getInstance()
-								.getPluginAnimalProtect()
-								.hasOwner(
-										pet.getEntity().getUniqueId()
-												.toString())) {
-							MbPets.getInstance()
-									.getPluginAnimalProtect()
-									.unprotectAnimal(
-											pet.getEntity().getUniqueId()
-													.toString());
-							MbPets.getInstance()
-									.getLogger()
-									.info("Animal "
-											+ pet.getEntity().getUniqueId()
-													.toString()
-											+ "/ "
-											+ pet.getEntity().getType()
-													.toString()
-											+ " has been removed. The protection was deleted!");
-						}
-					}
-					pet.getEntity().remove();
+				if (MbPets.getInstance().getEconomy()
+						.getBalance(pet.getOwner()) >= pet.getPrice()) {
 
+					try {
+						Pet oldPet = MbPets.getInstance().getPet(
+								chatInput.getSender(), pet.getNumber());
+						// delete the old pet that has the same number
+						if (oldPet != null) {
+							pet.setNumber(oldPet.getNumber());
+							oldPet.delete();
+						}
+						// if the to-spawn entity is a requested convert, the
+						// "old"
+						// entity is stored in pet.entity.
+						// it gets despawned now
+						if (pet.getEntity() != null) {
+							if (MbPets.getInstance().getPluginAnimalProtect() != null) {
+								if (MbPets
+										.getInstance()
+										.getPluginAnimalProtect()
+										.hasOwner(
+												pet.getEntity().getUniqueId()
+														.toString())) {
+									MbPets.getInstance()
+											.getPluginAnimalProtect()
+											.unprotectAnimal(
+													pet.getEntity()
+															.getUniqueId()
+															.toString());
+									MbPets.getInstance()
+											.getLogger()
+											.info("Animal "
+													+ pet.getEntity()
+															.getUniqueId()
+															.toString()
+													+ "/ "
+													+ pet.getEntity().getType()
+															.toString()
+													+ " has been removed. The protection was deleted!");
+								}
+							}
+							pet.getEntity().remove();
+						}
+
+						// spawn and enter into the db
+						pet.spawn();
+						EconomyResponse response = MbPets.getInstance().getEconomy()
+							.withdrawPlayer(pet.getOwner(), pet.getPrice());
+						if (response.transactionSuccess()) {
+							pet.confirm();
+							MbPets.getInstance().getConfigurations()
+									.remove(chatInput.getSender());
+							chatInput.getSender().sendMessage(
+									MbPetsConfig
+											.getTextNode("info.petConfirmed"));
+						}						
+					} catch (SQLException e) {
+						e.printStackTrace();
+					}
+				} else {
+					chatInput.getSender().sendMessage(
+							MbPetsConfig.getTextNode("error.notThatMuchMoney"));
 				}
-				pet.confirm(player);
 			} else {
-				player.sendMessage(MbPetsUtils
-						.getTextNode("error.petNotFinished"));
+				chatInput.getSender().sendMessage(
+						MbPetsConfig.getTextNode("error.petNotFinished"));
 			}
-		} else {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPreparedPets"));
+		}
+		try {
+			connection.close();
+		} catch (SQLException e) {
 		}
 	}
 
 	/**
-	 * adds a convert-request that lasts for 10 seconds
+	 * initializes a pet or loads a pet that is in configuration
 	 * 
-	 * @param player
+	 * @param chatInput
 	 */
-	private void convertPet(Player player) {
-		if (!player.hasPermission("MbPets.convert")) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPermission"));
+	private void createPet(ChatInput chatInput) {
+		if (!chatInput.getSender().getPlayer().hasPermission("MbPets.buy")) {
+			chatInput.getSender().getPlayer()
+					.sendMessage(MbPetsConfig.getTextNode("error.noPermission"));
 			return;
 		}
-		if (MbPets.getInstance().getPluginAnimalProtect() == null) {
-			return;
+		Pet pet = null;
+		Pet oldPet = null;
+		Player owner = chatInput.getSender();
+		DisguiseType type = MbPetsConfig.parseType(chatInput.getType());
+		String name = "";
+		String color = "";
+		String style = "";
+		Integer size = MbPetsConfig.parseSlimeSize(chatInput.getSize());
+		Material material = MbPetsConfig.parseMaterial(chatInput.getType());
+		Material block = MbPetsConfig.parseBlock(chatInput.getType());
+		Boolean isBaby = false;
+		Integer number = MbPets.getLatestPetNumber(owner) + 1;
+		if (MbPets.getInstance().getConfigurations().get(chatInput.getSender()) != null) {
+			// get the attributes the current pet object has stored
+			oldPet = MbPets.getInstance().getConfigurations()
+					.get(chatInput.getSender());
+			type = oldPet.getType();
+			number = oldPet.getNumber();
+			if (oldPet instanceof HorsePet) {
+				color = ((HorsePet) oldPet).getColor() != null ? ((HorsePet) oldPet)
+						.getColor().name() : null;
+				style = ((HorsePet) oldPet).getStyle() != null ? ((HorsePet) oldPet)
+						.getStyle().name() : null;
+			} else if (oldPet instanceof SheepPet
+					&& ((SheepPet) oldPet).getColor() != null) {
+				color = ((SheepPet) oldPet).getColor().name();
+			} else if (oldPet instanceof WolfPet
+					&& ((WolfPet) oldPet).getColor() != null) {
+				color = ((WolfPet) oldPet).getColor().name();
+			} else if (oldPet instanceof OcelotPet
+					&& ((OcelotPet) oldPet).getStyle() != null) {
+				style = ((OcelotPet) oldPet).getStyle().name();
+			} else if (oldPet instanceof RabbitPet
+					&& ((RabbitPet) oldPet).getStyle() != null) {
+				style = ((RabbitPet) oldPet).getStyle().name();
+			} else if (oldPet instanceof Sizeable 
+					&& ((Sizeable) oldPet).getSize() != null) {
+				size = ((Sizeable) oldPet).getSize();
+			}
+			if (oldPet instanceof Ageable && ((Ageable) oldPet).isBaby() != null) {
+				isBaby = ((Ageable) oldPet).isBaby();
+			}
+			if (oldPet instanceof DroppedItem) {
+				material = ((DroppedItem)oldPet).getMaterial();
+				type = DisguiseType.DROPPED_ITEM;
+			}
+			if (oldPet instanceof FallingBlock) {
+				block = ((FallingBlock)oldPet).getBlock();
+				type = DisguiseType.FALLING_BLOCK;
+			}
+			name = oldPet.getName();
 		}
-		MbPets.getInstance().getConvertRightClickListener().addConvert(player);
+		name = chatInput.getName() != null ? chatInput.getName() : name;
+		color = chatInput.getColor() != null ? chatInput.getColor() : color;
+		style = chatInput.getStyle() != null ? chatInput.getStyle() : style;
+		isBaby = Boolean.parseBoolean(chatInput.getBaby() != null ? chatInput
+				.getBaby() : isBaby.toString());
+		number = chatInput.getNumber() != null ? chatInput.getNumber() : number;
+		size = chatInput.getSize() != null ? MbPetsConfig.parseSlimeSize(chatInput.getSize()) : size;
+		// a type must be entered first to ensure, that the correct color and
+		// style attributes are set!
+		if (type == null) {
+			if (MbPetsConfig.parseMaterial(chatInput.getType()) != null) {
+				type = DisguiseType.DROPPED_ITEM;
+			} else if (MbPetsConfig.parseBlock(chatInput.getType()) != null) {
+				type = DisguiseType.FALLING_BLOCK;
+			} else {
+				chatInput.getSender().sendMessage(
+						MbPetsConfig.getTextNode("error.missingType"));
+				chatInput.getSender().sendMessage(
+						MbPetsConfig.getTextNode("info.types") + ChatColor.GREEN
+								+ StringUtils.join(MbPetsConfig.getAvailableTypes(),", ") + ChatColor.GREEN + ", " 
+								+ StringUtils.join(MbPetsConfig.getAvailableDroppedItems(),", ") + ChatColor.GREEN + ", " 
+								+ StringUtils.join(MbPetsConfig.getAvailableFallingBlocks(),", "));
+				return;
+			}
+		}
+
+		switch (type) {
+		case CHICKEN:
+			pet = new ChickenPet(owner, name, number, isBaby);
+			break;
+		case COW:
+			pet = new CowPet(owner, name, number, isBaby);
+			break;
+		case DROPPED_ITEM:
+			if (material != null) {
+				switch (material) {
+				case OBSIDIAN:
+					pet = new DevilPet(owner, name, number);
+					break;
+				case SNOW_BLOCK:
+					pet = new AngelPet(owner, name, number);
+					break;
+				default:
+					pet = new DroppedItemPet(owner, name, number, material);
+					break;
+				}
+			} else {
+				chatInput.getSender().sendMessage(
+						MbPetsConfig.getTextNode("info.types")
+								+ ChatColor.GREEN
+								+ MbPetsConfig.getAvailableDroppedItems());
+			}
+			break;
+		case ENDERMAN: 
+			//endermen sind buggy <.<
+			//pet = new EndermanPet(owner, name, number);
+			chatInput.getSender().sendMessage(ChatColor.RED+"Endermen sind derzeit noch nicht verf¸gbar! Warte ab ;)");
+			return;
+		case FALLING_BLOCK: 
+			if (block != null) {
+				pet = new FallingBlockPet(owner, name, number, block);
+			} else {
+				chatInput.getSender().sendMessage(
+						MbPetsConfig.getTextNode("info.types")
+								+ ChatColor.GREEN
+								+ MbPetsConfig.getAvailableFallingBlocks());
+			}
+			break;
+		case HORSE:
+			pet = new HorsePet(owner, name, number, isBaby,
+					MbPetsConfig.parseHorseColor(color),
+					MbPetsConfig.parseHorseStyle(style));
+			break;
+		case IRON_GOLEM:
+			pet = new IronGolemPet(owner, name, number);
+			break;
+		case MAGMA_CUBE:
+			pet = new MagmaCubePet(owner, name, number, size);
+			break;
+		case MUSHROOM_COW:
+			pet = new MooshroomPet(owner, name, number, isBaby);
+			break;
+		case OCELOT:
+			pet = new OcelotPet(owner, name, number, isBaby,
+					MbPetsConfig.parseOcelotType(style));
+			break;
+		case PIG:
+			pet = new PigPet(owner, name, number, isBaby);
+			break;
+		case RABBIT:
+			pet = new RabbitPet(owner, name, number, isBaby,
+					MbPetsConfig.parseRabbitType(style));
+			break;
+		case SHEEP:
+			pet = new SheepPet(owner, name, number, isBaby,
+					MbPetsConfig.parseColor(color));
+			break;
+		case SLIME:
+			pet = new SlimePet(owner, name, number, size);
+			break;
+		case SKELETON_HORSE:
+			pet = new SkeletonHorsePet(owner, name, number, isBaby);
+			break;
+		case UNDEAD_HORSE:
+			pet = new UndeadHorsePet(owner, name, number, isBaby);
+			break;
+		case WOLF:
+			pet = new WolfPet(owner, name, number, isBaby,
+					MbPetsConfig.parseColor(color));
+			break;
+		default:	
+			break;
+		}
+		if (oldPet != null) {
+			// for uncommon prices e.g. modification price is 1000 benches
+			pet.setPrice(oldPet.getPrice());
+			if (oldPet.getEntity() != null) {
+				//for converted pets as they store the old entity in this field
+				pet.setEntity(oldPet.getEntity());
+			}
+		} 	
+		MbPets.getInstance().getConfigurations()
+				.put(chatInput.getSender(), pet);
+		owner.sendMessage(pet.toString());
+
+	}
+
+	/**
+	 * explodes the users chat input and stores it into a {@link ChatInput}
+	 * object
+	 * 
+	 * @param args
+	 * @param sender
+	 * @return
+	 */
+	private ChatInput explodeChatInput(String[] args, Player sender) {
+		if (args.length == 0) {
+			sender.sendMessage(MbPetsConfig.getTextNode("help.Options"));
+			sender.sendMessage(
+					MbPetsConfig.getTextNode("info.types") + ChatColor.GREEN
+							+ StringUtils.join(MbPetsConfig.getAvailableTypes(),", ") + ChatColor.GREEN + ", " 
+							+ StringUtils.join(MbPetsConfig.getAvailableDroppedItems(),", ") + ChatColor.GREEN + ", " 
+							+ StringUtils.join(MbPetsConfig.getAvailableFallingBlocks(),", "));
+			return null;
+		} else {
+			ChatInput chatInput = new ChatInput();
+			chatInput.setSender(sender);
+			Operation mainOperation = Operation.getOperation(args[0]);
+			if (mainOperation != null) {
+				chatInput.setOperation(mainOperation);
+			} else {
+				sender.sendMessage(MbPetsConfig.getTextNode("error.wrongFunction")
+						.replace("{0}", args[0]));
+				return null;
+			}
+			for (int i = 0; i < args.length; i++) {
+				Operation operation = Operation.getOperation(args[i]);
+				if (NumberUtils.isNumber(args[i])) {
+					chatInput.setNumber(Integer.parseInt(args[i]));
+					continue;
+				}
+				if (MbPets.getInstance().getPluginUuidDb() != null) {
+					if (MbPets.getInstance().getPluginUuidDb()
+							.getUUIDByName(args[i]) != null) {
+						chatInput.setTargetPlayer(MbPets
+								.getInstance()
+								.getServer()
+								.getOfflinePlayer(
+										UUID.fromString(MbPets.getInstance()
+												.getPluginUuidDb()
+												.getUUIDByName(args[i]))));
+					}
+				}
+				if (operation != null) {
+					if (i + 1 < args.length || !Operation.needsValue(operation)) {
+						switch (operation) {
+						case BABY:
+							chatInput.setBaby(args[i + 1]);
+							break;
+						case COLOR:
+							chatInput.setColor(args[i + 1]);
+							break;
+						case NAME:
+							chatInput.setName(args[i + 1]);
+							break;
+						case SIZE:
+							chatInput.setSize(args[i + 1]);
+							break;
+						case STYLE:
+							chatInput.setStyle(args[i + 1]);
+							break;
+						case TYPE:
+							chatInput.setType(args[i + 1]);
+							break;
+						default:
+							break;
+						}
+					} else {
+						sender.sendMessage(MbPetsConfig.getTextNode(
+								"error.missingValue").replace(
+								"{0}",
+								WordUtils.capitalize(operation.name()
+										.toLowerCase())));
+						return null;
+					}
+				}
+			}
+			return chatInput;
+			
+		}
 	}
 
 	/**
 	 * removes the given pet from the db
 	 * 
-	 * @param argsMap
-	 *            the chat input in a HashMap<MbPetUtils.Keys, String)
+	 * @param chatInput
 	 * @throws SQLException
 	 */
-	private void deletePet(final CommandSender sender,
-			final HashMap<Keys, String> argsMap) throws SQLException {
+	private void deletePet(final ChatInput chatInput) {
 		MbPets.getInstance().getServer().getScheduler()
 				.runTaskAsynchronously(MbPets.getInstance(), new Runnable() {
-					public void run() {
-						PreparedStatement statement;
-						OfflinePlayer targetPlayer;
-						Connection con = DatabaseConnectionManager
-								.getInstance().getConnection();
-						if (!sender.hasPermission("MbPets.delete")) {
-							sender.sendMessage(MbPetsUtils
-									.getTextNode("error.noPermission"));
-							return;
-						}
-						if (con == null) {
-							sender.sendMessage(MbPetsUtils
-									.getTextNode("error.noDbConnection"));
-							return;
-						}
-						if (argsMap.get(MbPetsUtils.Keys.PLAYER) == null) {
-							sender.sendMessage(MbPetsUtils.getTextNode(
-									"error.missingValue").replace("{0}",
-									"Player"));
-							return;
-						}
-						String targetPlayerUUID = MbPets
-								.getInstance()
-								.getPluginUuidDb()
-								.getUUIDByName(
-										argsMap.get(MbPetsUtils.Keys.PLAYER));
-						if (targetPlayerUUID == null) {
-							sender.sendMessage(MbPetsUtils
-									.getTextNode("error.playerUnknown"));
-							return;
-						} else {
-							targetPlayer = MbPets
-									.getInstance()
-									.getServer()
-									.getOfflinePlayer(
-											UUID.fromString(targetPlayerUUID));
-						}
-						int number = (argsMap.get(MbPetsUtils.Keys.NUMBER) == null ? MbPetsUtils
-								.getNumberOfPets(targetPlayer) : Integer
-								.parseInt(argsMap.get(MbPetsUtils.Keys.NUMBER)));
-						try {
-							statement = con
-									.prepareStatement("DELETE from MbPets_Pet WHERE playerid = (Select playerid from MbPets_Player where uuid=?) AND number = ?");
-							statement.setString(1, targetPlayerUUID);
-							statement.setInt(2, number);
-							statement.executeUpdate();
-							statement.close();
-						} catch (SQLException e) {
-							e.printStackTrace();
-						}
-						sender.sendMessage(MbPetsUtils
-								.getTextNode("info.petDeleted"));
-					}
-				});
-	}
 
-	/**
-	 * uses the given args-array to put the values in a HashMap
-	 * 
-	 * @return
-	 */
-	private HashMap<MbPetsUtils.Keys, String> explodeChatInput(String[] args,
-			CommandSender commandsender) {
-		HashMap<MbPetsUtils.Keys, String> ret = new HashMap<MbPetsUtils.Keys, String>();
-		if (args.length < 1) {
-			commandsender.sendMessage(MbPetsUtils.getTextNode("help.Options"));
-			return null;
-		}
-		if (MbPetsUtils.Functions.contains(args[0])) {
-			ret.put(MbPetsUtils.Keys.COMMAND, args[0]);
-		} else {
-			commandsender.sendMessage(MbPetsUtils.getTextNode(
-					"error.wrongFunction").replace("{0}", args[0]));
-			return null;
-		}
-		for (int i = 0; i < args.length; i++) {
-			if (NumberUtils.isNumber(args[i])) {
-				ret.put(MbPetsUtils.Keys.NUMBER, args[i]);
-				continue;
-			}
-			for (int j = 0; j < MbPetsUtils.Keys.values().length; j++)
-				if (args[i].equalsIgnoreCase(MbPetsUtils.Keys.values()[j]
-						.name())) {
-					if (i + 1 < args.length) {
-						ret.put(MbPetsUtils.Keys.values()[j], args[i + 1]);
-					} else {
-						commandsender.sendMessage(MbPetsUtils.getTextNode(
-								"error.missingValue")
-								.replace(
-										"{0}",
-										WordUtils.capitalize(MbPetsUtils.Keys
-												.values()[j].name()
-												.toLowerCase())));
-						return null;
-					}
-				}
-		}
-		return ret;
-	}
+					@Override
+					public void run() {						
+						Connection connection = DatabaseConnectionManager.getInstance()
+								.getConnection();
+						if (!chatInput.getSender().hasPermission("MbPets.delete")) {
+							chatInput.getSender().sendMessage(
+									MbPetsConfig.getTextNode("error.noPermission"));
+							return;
+						}
+						if (connection == null) {
+							chatInput.getSender().sendMessage(
+									MbPetsConfig.getTextNode("error.noDbConnection"));
+							return;
+						}
+						if (chatInput.getTargetPlayer() == null) {
+							chatInput.getSender().sendMessage(
+									MbPetsConfig.getTextNode("error.missingValue").replace("{0}",
+											"Player"));
+							return;
+						}
 
-	/**
-	 * deletes all pets from one player
-	 * 
-	 * @param sender
-	 * @param argsMap
-	 *            the chat input in a HashMap<MbPetUtils.Keys, String)
-	 * @throws SQLException
-	 */
-	private void flushPets(CommandSender sender, HashMap<Keys, String> argsMap)
-			throws SQLException {
-		final Connection con = DatabaseConnectionManager.getInstance()
-				.getConnection();
-		if (!sender.hasPermission("MbPets.delete")) {
-			sender.sendMessage(MbPetsUtils.getTextNode("error.noPermission"));
-			return;
-		}
-		if (con == null) {
-			sender.sendMessage(MbPetsUtils.getTextNode("error.noDbConnection"));
-			return;
-		}
-		if (argsMap.get(MbPetsUtils.Keys.PLAYER) == null) {
-			sender.sendMessage(MbPetsUtils.getTextNode("error.missingValue")
-					.replace("{0}", "Player"));
-			return;
-		}
-		final String targetPlayerUUID = MbPets.getInstance().getPluginUuidDb()
-				.getUUIDByName(argsMap.get(MbPetsUtils.Keys.PLAYER));
-		if (targetPlayerUUID == null) {
-			sender.sendMessage(MbPetsUtils.getTextNode("error.playerUnknown"));
-			return;
-		}
-		MbPets.getInstance().getServer().getScheduler()
-				.runTaskAsynchronously(MbPets.getInstance(), new Runnable() {
-					public void run() {
-						PreparedStatement statement;
+						int number = (chatInput.getNumber() == null ? MbPets
+								.getLatestPetNumber(chatInput.getTargetPlayer())
+								: chatInput.getNumber());
 						try {
-							statement = con
-									.prepareStatement("DELETE from MbPets_Pet WHERE playerid = (Select playerid from MbPets_Player where uuid = ?)");
-							statement.setString(1, targetPlayerUUID);
-							statement.executeUpdate();
-							statement.close();
-						} catch (SQLException e) {
-							e.printStackTrace();
-						}
-					}
-				});
-		sender.sendMessage(MbPetsUtils.getTextNode("info.petsFlushed"));
-	}
-
-	/**
-	 * modifies a pet
-	 * 
-	 * @param argsMap
-	 *            the chat input in a HashMap<MbPetUtils.Keys, String)
-	 * @param player
-	 *            or commandSender
-	 * @throws SQLException
-	 */
-	private void modifyPet(final HashMap<Keys, String> argsMap,
-			final Player player) throws SQLException {
-		MbPets.getInstance().getServer().getScheduler()
-				.runTaskAsynchronously(MbPets.getInstance(), new Runnable() {
-					public void run() {
-						if (MbPets.getInstance().getPluginVault() == null) {
-							player.sendMessage(MbPetsUtils
-									.getTextNode("error.noVault"));
-							return;
-						}
-						Pet pet = MbPets.getInstance().getPreparedPet(player) != null ? MbPets
-								.getInstance().getPreparedPet(player)
-								: new Pet();
-						final Connection con = DatabaseConnectionManager
-								.getInstance().getConnection();
-						if (!player.hasPermission("MbPets.modify")) {
-							player.sendMessage(MbPetsUtils
-									.getTextNode("error.noPermission"));
-							return;
-						}
-						if (con == null) {
-							player.sendMessage(MbPetsUtils
-									.getTextNode("error.noDbConnection"));
-							return;
-						}
-						int number;
-						final ResultSet res;
-						PreparedStatement preparedStatement;
-						number = argsMap.get(MbPetsUtils.Keys.NUMBER) == null ? MbPetsUtils
-								.getNumberOfPets(player) : Integer
-								.parseInt(argsMap.get(MbPetsUtils.Keys.NUMBER));
-						try {
-							preparedStatement = con
-									.prepareStatement("Select * from MbPets_Pet where playerid = (Select playerid from MbPets_Player where uuid = ?) and number = ?");
-							preparedStatement.setString(1, player.getUniqueId()
-									.toString());
-							preparedStatement.setInt(2, number);
-							res = preparedStatement.executeQuery();
-							if (res.first()) {
-								// reconstruct the pet
-								pet.setType(MbPetsUtils.parseType(res
-										.getString("type")));
-								pet.setDroppedItemType(MbPetsUtils
-										.parseItemStack(res.getString("type")));
-								pet.setColor(MbPetsUtils.parseColor(res
-										.getString("color")));
-								pet.setHorseColor(MbPetsUtils
-										.parseHorseColor(res
-												.getString("horsecolor")));
-								pet.setHorseStyle(MbPetsUtils
-										.parseHorseStyle(res
-												.getString("horsestyle")));
-								pet.setOcelotStyle(MbPetsUtils
-										.parseOcelotType(res
-												.getString("ocelotstyle")));
-								pet.setName(res.getString("customname") != null ? res
-										.getString("customname") : null);
-								pet.setBaby(res.getBoolean("baby"));
-								pet.setOwner(player);
-								pet.setPrice();
-								pet.setModified(true);
-							} else {
-								player.sendMessage(MbPetsUtils.getTextNode(
-										"error.noPetToCall").replace("{0}",
-										"Du"));
-								return;
+							Pet pet = MbPets.getInstance().getPet(chatInput.getTargetPlayer(), number);
+							if (pet != null) {
+								pet.delete();
+								chatInput.getSender().sendMessage(
+										MbPetsConfig.getTextNode("info.petDeleted"));
+							}
+							if (MbPets.getInstance().getPets().get(chatInput.getSender()) != null) {
+								MbPets.getInstance().getPets().get(chatInput.getSender()).uncall();
 							}
 						} catch (SQLException e) {
 							e.printStackTrace();
 						}
-
-						if (argsMap.get(MbPetsUtils.Keys.NAME) != null) {
-							pet.setName(argsMap.get(MbPetsUtils.Keys.NAME));
-						}
-						if (argsMap.get(MbPetsUtils.Keys.COLOR) != null) {
-							pet.setHorseColor(MbPetsUtils
-									.parseHorseColor(argsMap
-											.get(MbPetsUtils.Keys.COLOR)));
-							pet.setColor(MbPetsUtils.parseColor(argsMap
-									.get(MbPetsUtils.Keys.COLOR)));
-						}
-						if (argsMap.get(MbPetsUtils.Keys.STYLE) != null) {
-							pet.setHorseStyle(MbPetsUtils
-									.parseHorseStyle(argsMap
-											.get(MbPetsUtils.Keys.STYLE)));
-
-							pet.setOcelotStyle(MbPetsUtils
-									.parseOcelotType(argsMap
-											.get(MbPetsUtils.Keys.STYLE)));
-						}
-						if (argsMap.get(MbPetsUtils.Keys.BABY) != null) {
-							pet.setBaby(argsMap.get(MbPetsUtils.Keys.BABY)
-									.equalsIgnoreCase("true"));
-						}
-						pet.setNumber(number);
-						MbPets.getInstance().addPreparedPet(pet);
-						pet.printStatus(false);
-						// player.sendMessage(MbPetsUtils.getTextNode("petReadyToModify"));
-
 					}
 				});
 	}
 
 	/**
-	 * onCommand
+	 * despawns all called pets
+	 * @param sender
 	 */
-	public boolean onCommand(CommandSender commandSender, Command cmd,
-			String arg2, String[] args) {
-		if (commandSender instanceof Player) {
-			Player player = (Player) commandSender;
-			HashMap<MbPetsUtils.Keys, String> argsMap = explodeChatInput(args,
-					player);
-			if (argsMap != null) {
-				try {
-					switch (MbPetsUtils.Functions.valueOf(argsMap.get(
-							MbPetsUtils.Keys.COMMAND).toUpperCase())) {
-					case BABY:
-					case COLOR:
-					case NAME:
-					case NUMBER:
-					case STYLE:
-					case TYPE:
-						setUpPet(argsMap, player);
-						break;
-					case CALL:
-						callPet(argsMap, player);
-						break;
-					case CONFIRM:
-						confirmPet(argsMap, player);
-						break;
-					case CANCEL:
-						cancelPreparation(player);
-						break;
-					case LIST:
-						showList(argsMap, player);
-						break;
-					case DELETE:
-						deletePet(player, argsMap);
-						break;
-					case CONVERT:
-						convertPet(player);
-						break;
-					case MODIFY:
-						modifyPet(argsMap, player);
-						break;
-					case HELP:
-						showHelp(argsMap, player);
-						break;
-					case STATUS:
-						showStatus(player);
-						break;
-					case UNCALL:
-						uncallPet(player);
-						break;
-					case FLUSH:
-						flushPets(player, argsMap);
-						break;
-					case MONITOR:
-						showMonitor(player);
-						break;
-					case INFO:
-						showInfo(player, argsMap);
-						break;
-					case RELOAD:
-						reloadConfig(player);
-						break;
-					case REGENERATE:
-						regenerateConfig(player);
-					default:
-						break;
-					}
-				} catch (SQLException e1) {
-					e1.printStackTrace();
+	private void despawnPet(ChatInput chatInput) {
+		if (!chatInput.getSender().hasPermission("MbPets.despawn")) {
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("error.noPermission"));
+			return;
+		}
+		int i = 0;
+		if (chatInput.getNumber() == null) {
+			for (Entry<Player, Pet> entry : MbPets.getInstance().getPets().entrySet()) {
+				if (entry.getValue() != null) {
+					entry.getValue().uncall();
+					MbPets.getInstance().getPets().remove(entry.getKey());
+					i++;
 				}
 			}
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.despawnCount").replace("{0}", Integer.toString(i)));
 		} else {
-			MbPets.getInstance().getLogger()
-					.info("Command can only be run by a player!");
+			for (Entry<Player, Pet> entry : MbPets.getInstance().getPets().entrySet()) {
+				if (entry.getValue() != null) {
+					if (entry.getValue().getEntity().getLocation().distance(chatInput.getSender().getLocation()) <= chatInput.getNumber()) {
+						entry.getValue().uncall();
+						MbPets.getInstance().getPets().remove(entry.getKey());
+						i++;
+					}
+				}
+			}
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.despawnCountRange").replace("{0}", Integer.toString(i)).replace("{1}", chatInput.getNumber().toString()));
 		}
-		return false;
+	}
+	
+	/**
+	 * deletes all pets from one player
+	 * 
+	 * @param chatInput
+	 */
+	private void flushPets(final ChatInput chatInput) {
+		
+		MbPets.getInstance().getServer().getScheduler()
+				.runTaskAsynchronously(MbPets.getInstance(), new Runnable() {
+					public void run() {
+						Connection connection = DatabaseConnectionManager.getInstance()
+							.getConnection();
+						if (!chatInput.getSender().hasPermission("MbPets.delete")) {
+							chatInput.getSender().sendMessage(
+									MbPetsConfig.getTextNode("error.noPermission"));
+							return;
+						}
+						if (connection == null) {
+							chatInput.getSender().sendMessage(
+									MbPetsConfig.getTextNode("error.noDbConnection"));
+							return;
+						}
+						if (chatInput.getTargetPlayer() == null) {
+							chatInput.getSender().sendMessage(
+									MbPetsConfig.getTextNode("error.missingValue").replace("{0}",
+											"Player"));
+							return;
+						}
+						PreparedStatement statement;
+						try {
+							statement = connection
+									.prepareStatement("DELETE from MbPets_Pet WHERE playerid = (Select playerid from MbPets_Player where uuid = ?)");
+							statement.setString(1, chatInput.getTargetPlayer()
+									.getUniqueId().toString());
+							statement.executeUpdate();
+							statement.close();
+							connection.close();
+						} catch (SQLException e) {
+							e.printStackTrace();
+						}
+						chatInput.getSender().sendMessage(
+								MbPetsConfig.getTextNode("info.petsFlushed"));
+					}
+
+				});
+	}
+
+	/**
+	 * loads a pet from the database and stores it into a {@link Pet} object for
+	 * a later modification
+	 * 
+	 * @param chatInput
+	 */
+	public void modifyPet(final ChatInput chatInput) {
+		MbPets.getInstance().getServer().getScheduler()
+				.runTaskAsynchronously(MbPets.getInstance(), new Runnable() {
+					public void run() {
+						Connection connection = DatabaseConnectionManager.getInstance()
+								.getConnection();
+						if (MbPets.getInstance().getPluginVault() == null) {
+							chatInput.getSender().sendMessage(
+									MbPetsConfig.getTextNode("error.noVault"));
+							return;
+						}
+						if (!chatInput.getSender().hasPermission("MbPets.modify")) {
+							chatInput.getSender().sendMessage(
+									MbPetsConfig.getTextNode("error.noPermission"));
+							return;
+						}
+						if (connection == null) {
+							chatInput.getSender().sendMessage(
+									MbPetsConfig.getTextNode("error.noDbConnection"));
+							return;
+						}
+						int number = chatInput.getNumber() != null ? chatInput
+								.getNumber() : MbPets
+								.getLatestPetNumber(chatInput.getSender());
+						try {
+							Pet pet = MbPets.getInstance().getPet(
+									chatInput.getSender(), number);
+							MbPets.getInstance().getConfigurations()
+									.put(chatInput.getSender(), pet);
+							if (!(pet instanceof DroppedItem)) {
+								pet.setPrice(MbPets.getInstance().getConfig()
+										.getDouble("prices.MODIFY", 1000));
+							} else {
+								//items names arent currently displayed so it would be unfair to charge the owners for changing a name they don't see
+								pet.setPrice(0.0);
+							}
+							chatInput.getSender().sendMessage(pet.toString());
+							connection.close();
+						} catch (SQLException e) {
+							e.printStackTrace();
+						}
+					}
+				});
+	}
+
+	/**
+	 * prints some help
+	 * 
+	 * @param chatInput
+	 */
+	private void printHelp(ChatInput chatInput) {
+		if (!chatInput.getSender().hasPermission("MbPets.print")) {
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("error.noPermission"));
+			return;
+		}
+		if (chatInput.getType() == null) {
+			// user only entered /pet help
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("help.Options"));
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.types") + ChatColor.GREEN
+							+ StringUtils.join(MbPetsConfig.getAvailableTypes(),", ") + ChatColor.GREEN + ", " 
+							+ StringUtils.join(MbPetsConfig.getAvailableDroppedItems(),", ") + ChatColor.GREEN + ", " 
+							+ StringUtils.join(MbPetsConfig.getAvailableFallingBlocks(),", "));
+			return;
+		}
+		chatInput.getSender().sendMessage(MbPetsConfig.getTextNode("help.Head"));
+		DisguiseType type = MbPetsConfig.parseType(chatInput.getType()) != null ? MbPetsConfig
+				.parseType(chatInput.getType()) : DisguiseType.DROPPED_ITEM;
+		switch (type) {
+		case CHICKEN:
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Baby")
+							.replace("{1}", MbPetsConfig.getTextNode("help.BABY")));
+			break;
+		case COW:
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Baby")
+							.replace("{1}", MbPetsConfig.getTextNode("help.BABY")));
+			break;
+		case DROPPED_ITEM:
+			chatInput
+					.getSender()
+					.sendMessage(
+							MbPetsConfig.getTextNode("info.Element")
+									.replace("{0}",
+											ChatColor.DARK_GREEN + "Typ")
+									.replace(
+											"{1}",
+											StringUtils.join(MbPetsConfig.getAvailableDroppedItems(),", ")));
+			break;
+		case HORSE:
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Baby")
+							.replace("{1}", MbPetsConfig.getTextNode("help.BABY")));
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Color")
+							.replace("{1}",
+									StringUtils.join(MbPetsConfig.getAvailableHorseColors(),", ")));
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Style")
+							.replace("{1}",
+									StringUtils.join(MbPetsConfig.getAvailableHorseStyles(),", ")));
+			break;
+		case MUSHROOM_COW:
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Baby")
+							.replace("{1}", MbPetsConfig.getTextNode("help.BABY")));
+			break;
+		case OCELOT:
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Baby")
+							.replace("{1}", MbPetsConfig.getTextNode("help.BABY")));
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Style")
+							.replace("{1}",
+									StringUtils.join(MbPetsConfig.getAvailableOcelotStyles(),", ")));
+			break;
+		case PIG:
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Baby")
+							.replace("{1}", MbPetsConfig.getTextNode("help.BABY")));
+			break;
+		case RABBIT:
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Baby")
+							.replace("{1}", MbPetsConfig.getTextNode("help.BABY")));
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Style")
+							.replace("{1}",
+									StringUtils.join(MbPetsConfig.getAvailableRabbitStyles(),", ")));
+			break;
+		case SHEEP:
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Baby")
+							.replace("{1}", MbPetsConfig.getTextNode("help.BABY")));
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Color")
+							.replace("{1}", StringUtils.join(MbPetsConfig.getAvailableColors(),", ")));
+			break;
+		case SKELETON_HORSE:
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Baby")
+							.replace("{1}", MbPetsConfig.getTextNode("help.BABY")));
+			break;
+		case UNDEAD_HORSE:
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Baby")
+							.replace("{1}", MbPetsConfig.getTextNode("help.BABY")));
+			break;
+		case WOLF:
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Baby")
+							.replace("{1}", MbPetsConfig.getTextNode("help.BABY")));
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("info.Element")
+							.replace("{0}", ChatColor.DARK_GREEN + "Color")
+							.replace("{1}", StringUtils.join(MbPetsConfig.getAvailableColors(),", ")));
+			break;
+		default:
+			chatInput.getSender().sendMessage(ChatColor.DARK_GREEN + "keine");
+			return;
+		}
+		chatInput.getSender().sendMessage(
+				MbPetsConfig.getTextNode("info.Element")
+						.replace("{0}", ChatColor.DARK_GREEN + "Name")
+						.replace("{1}", MbPetsConfig.getTextNode("help.NAME")));
+	}
+
+	/**
+	 * prints a pet list
+	 * 
+	 * @param chatInput
+	 */
+	private void printList(final ChatInput chatInput) {
+		
+		MbPets.getInstance().getServer().getScheduler()
+				.runTaskAsynchronously(MbPets.getInstance(), new Runnable() {
+
+					@Override
+					public void run() {
+						Connection connection = DatabaseConnectionManager.getInstance()
+								.getConnection();
+						if (!chatInput.getSender()
+								.hasPermission("MbPets.print")) {
+							chatInput.getSender().sendMessage(
+									MbPetsConfig.getTextNode("error.noPermission"));
+							return;
+						}
+						if (connection == null) {
+							chatInput.getSender().sendMessage(
+									MbPetsConfig.getTextNode("error.noDbConnection"));
+							return;
+						}
+						if (chatInput.getTargetPlayer() == null) {
+							// a user wants to see his own list
+							chatInput.setTargetPlayer(chatInput.getSender());
+						} 
+						chatInput.getSender().sendMessage(
+								MbPetsConfig.getTextNode("info.listHead").replace(
+										"{0}",
+										chatInput
+												.getSender()
+												.getName()
+												.equals(chatInput
+														.getTargetPlayer()
+														.getName()) ? "Du"
+												: chatInput.getTargetPlayer()
+														.getName()));
+						for (int i = 1; i <= MbPets
+								.getLatestPetNumber(chatInput.getTargetPlayer()); i++) {
+							try {
+								Pet pet = MbPets.getInstance()
+										.getPet(chatInput.getTargetPlayer(), i);
+								if (pet != null)
+									chatInput.getSender().sendMessage(
+											pet.getListDescription());
+								connection.close();
+							} catch (SQLException e) {
+								e.printStackTrace();
+							}
+
+						}
+					}
+				});
+	}
+	
+	/**
+	 * prints the info of the given pet
+	 * 
+	 * @param chatInput
+	 */
+	private void printInfo(final ChatInput chatInput) {
+		MbPets.getInstance().getServer().getScheduler()
+				.runTaskAsynchronously(MbPets.getInstance(), new Runnable() {
+
+					@Override
+					public void run() {
+						Connection connection = DatabaseConnectionManager.getInstance()
+								.getConnection();
+						if (!chatInput.getSender()
+								.hasPermission("MbPets.print")) {
+							chatInput.getSender().sendMessage(
+									MbPetsConfig.getTextNode("error.noPermission"));
+							return;
+						}
+						if (connection == null) {
+							chatInput.getSender().sendMessage(
+									MbPetsConfig.getTextNode("error.noDbConnection"));
+							return;
+						}
+						try {
+							Integer number = chatInput.getNumber() != null ? chatInput
+									.getNumber() : MbPets
+									.getLatestPetNumber(chatInput.getSender());
+							Pet pet = MbPets.getInstance().getPet(
+									chatInput.getSender(), number);
+							if (pet != null) {
+								chatInput.getSender().sendMessage(
+										pet.toShortString());
+							} else {
+								chatInput.getSender().sendMessage(
+										MbPetsConfig.getTextNode("error.noPetToCall")
+												.replace("{0}", "Du"));
+							}
+							connection.close();
+						} catch (SQLException e) {
+
+							e.printStackTrace();
+						}
+					}
+				});
+	}
+
+	/**
+	 * prints some stuff about db connectivity, number of spawned pets, number
+	 * of preparedPets & plugin version
+	 */
+	private void printMonitor(Player sender) {
+		if (!sender.hasPermission("MbPets.monitor")) {
+			sender.sendMessage(MbPetsConfig.getTextNode("error.noPermission"));
+			return;
+		}
+		sender.sendMessage(MbPetsConfig
+				.getTextNode("info.monitorDB")
+				.replace(
+						"{0}",
+						DatabaseConnectionManager.getInstance().getConnection() != null ? ChatColor.GREEN
+								+ "aktiv"
+								: ChatColor.RED + "inaktiv"));
+		sender.sendMessage(MbPetsConfig
+				.getTextNode("info.monitorSpawnedPets")
+				.replace("{0}",
+						Integer.toString(MbPets.getInstance().getPets().size())));
+		sender.sendMessage(MbPetsConfig.getTextNode("info.monitorPreparedPets")
+				.replace(
+						"{0}",
+						Integer.toString(MbPets.getInstance().getConfigurations()
+								.size())));
+		sender.sendMessage(MbPetsConfig.getTextNode("info.monitorVersion")
+				.replace(
+						"{0}",MbPets.getInstance().getDescription().getVersion()));
+	}
+
+	/**
+	 * prints the players current configured pet
+	 * 
+	 * @param sender
+	 */
+	private void printStatus(Player sender) {
+		if (!sender.hasPermission("MbPets.print")) {
+			sender.sendMessage(MbPetsConfig.getTextNode("error.noPermission"));
+			return;
+		}
+		Pet pet = MbPets.getInstance().getConfigurations().get(sender);
+		if (pet != null) {
+			sender.sendMessage(pet.toString());
+		} else {
+			sender.sendMessage(MbPetsConfig.getTextNode("error.noPreparedPets"));
+		}
 	}
 
 	/**
 	 * regenerates the plugins config. saves the old one before overwriting it
+	 * 
 	 * @param player
 	 */
 	private void regenerateConfig(Player player) {
 		if (!player.hasPermission("MbPets.regenerate")) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPermission"));
+			player.sendMessage(MbPetsConfig.getTextNode("error.noPermission"));
 			return;
 		}
-		new File(MbPets.getInstance().getDataFolder().getAbsoluteFile()+"/configOld.yml").delete();
-		File oldConfig = new File(MbPets.getInstance().getDataFolder().getAbsoluteFile()
+		new File(MbPets.getInstance().getDataFolder().getAbsoluteFile()
+				+ "/configOld.yml").delete();
+		File oldConfig = new File(MbPets.getInstance().getDataFolder()
+				.getAbsoluteFile()
 				+ "/config.yml");
-		oldConfig.renameTo(new File(MbPets.getInstance().getDataFolder().getAbsoluteFile()+"/configOld.yml"));
-		String dbUser = MbPets.getInstance().getConfig().getString("mysql.dbuser");
-		String dbPassword = MbPets.getInstance().getConfig().getString("mysql.dbpassword");
-		String database = MbPets.getInstance().getConfig().getString("mysql.database");
+		oldConfig.renameTo(new File(MbPets.getInstance().getDataFolder()
+				.getAbsoluteFile()
+				+ "/configOld.yml"));
+		String dbUser = MbPets.getInstance().getConfig()
+				.getString("mysql.dbuser");
+		String dbPassword = MbPets.getInstance().getConfig()
+				.getString("mysql.dbpassword");
+		String database = MbPets.getInstance().getConfig()
+				.getString("mysql.database");
 		String url = MbPets.getInstance().getConfig().getString("mysql.url");
 		new File(MbPets.getInstance().getDataFolder().getAbsoluteFile()
 				+ "/config.yml").delete();
@@ -547,9 +1106,9 @@ public class MbPetsCommand implements CommandExecutor, TabCompleter {
 		MbPets.getInstance().getConfig().set("mysql.database", database);
 		MbPets.getInstance().getConfig().set("mysql.url", url);
 		MbPets.getInstance().saveConfig();
-		MbPetsUtils.init();
+		MbPetsConfig.init();
 		MbPets.getInstance().reloadConfig();
-		player.sendMessage(MbPetsUtils.getTextNode("info.configReloaded"));
+		player.sendMessage(MbPetsConfig.getTextNode("info.configRegenerated"));
 	}
 
 	/**
@@ -559,542 +1118,70 @@ public class MbPetsCommand implements CommandExecutor, TabCompleter {
 	 */
 	private void reloadConfig(Player player) {
 		if (!player.hasPermission("MbPets.reload")) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPermission"));
+			player.sendMessage(MbPetsConfig.getTextNode("error.noPermission"));
 			return;
 		}
 		MbPets.getInstance().reloadConfig();
+		player.sendMessage(MbPetsConfig.getTextNode("info.configReloaded"));
 	}
 
 	/**
-	 * prints a pet list for the given player s
+	 * sells a pet
 	 * 
-	 * @param offlinePlayer
-	 * @throws SQLException
+	 * @param chatInput
 	 */
-	private void printList(final CommandSender sender,
-			final OfflinePlayer offlinePlayer) throws SQLException {
-		MbPets.getInstance().getServer().getScheduler()
-				.runTaskAsynchronously(MbPets.getInstance(), new Runnable() {
-					public void run() {
-						PreparedStatement statement;
-						Connection con = DatabaseConnectionManager
-								.getInstance().getConnection();
-						if (!sender.hasPermission("MbPets.print")) {
-							sender.sendMessage(MbPetsUtils
-									.getTextNode("error.noPermission"));
-							return;
-						}
-						try {
-							statement = con
-									.prepareStatement("Select * from MbPets_Pet left join MbPets_Player on MbPets_Pet.playerid = MbPets_Player.playerid "
-											+ "where MbPets_Player.uuid = ? order by number asc;");
-							statement.setString(1, offlinePlayer.getUniqueId()
-									.toString());
-							ResultSet res = statement.executeQuery();
-							if (res.first()) {
-								res.beforeFirst();
-								sender.sendMessage(MbPetsUtils.getTextNode(
-										"info.listHead").replace(
-										"{0}",
-										sender.getName().equals(
-												offlinePlayer.getName()) ? "Du"
-												: offlinePlayer.getName()));
-								while (res.next()) {
-									sender.sendMessage(MbPetsUtils
-											.getTextNode("info.listElement")
-											.replace(
-													"{0}",
-													Integer.toString(res
-															.getInt("number")))
-											.replace(
-													"{1}",
-													res.getString("customname")
-															.isEmpty() ? "unbenannt"
-															: res.getString("customname"))
-											.replace(
-													"{2}",
-													WordUtils.capitalize(res
-															.getString("type")
-															.toLowerCase()
-															.replace("_", " "))));
-								}
-							} else {
-								sender.sendMessage(MbPetsUtils.getTextNode(
-										"error.noPetToCall").replace(
-										"{0}",
-										sender.getName().equals(
-												offlinePlayer.getName()) ? "Du"
-												: offlinePlayer.getName()));
-							}
-						} catch (SQLException e) {
-
-						}
-					}
-				});
-	}
-
-	/**
-	 * creates a Pet object and fills it with the attributes entered by command
-	 * 
-	 * @param argsMap
-	 *            the chat input in a HashMap<MbPetUtils.Keys, String)
-	 * @throws SQLException
-	 */
-	private void setUpPet(HashMap<MbPetsUtils.Keys, String> argsMap,
-			Player player) throws SQLException {
-		Pet pet = MbPets.getInstance().getPreparedPet(player);
-		if (!player.hasPermission("MbPets.buy")) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPermission"));
-			return;
-		}
-		if (argsMap.get(MbPetsUtils.Keys.TYPE) != null) {
-			if (MbPetsUtils.parseType(argsMap.get(MbPetsUtils.Keys.TYPE)) != null
-					&& MbPetsUtils
-							.parseType(argsMap.get(MbPetsUtils.Keys.TYPE)) != DisguiseType.DROPPED_ITEM) {
-				pet = new Pet(MbPetsUtils.parseType(argsMap
-						.get(MbPetsUtils.Keys.TYPE)));
-			} else {
-				if (MbPetsUtils.parseItemStack(argsMap
-						.get(MbPetsUtils.Keys.TYPE)) != null) {
-					pet = new Pet(MbPetsUtils.parseItemStack(argsMap
-							.get(MbPetsUtils.Keys.TYPE)));
-					pet.setType(DisguiseType.DROPPED_ITEM);
-				} else {
-					player.sendMessage(MbPetsUtils.getTextNode("help.TYPE"));
-					return;
-				}
-			}
-		}
-		// a type must be entered first to ensure, that the correct color and
-		// style attributes are set!
-		if (pet == null) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.missingType"));
-			player.sendMessage(MbPetsUtils.getTextNode("help.TYPE"));
-			return;
-		}
-
-		// load the configurable attributes for the given type
-		switch (pet.getType()) {
-		case CHICKEN:
-			if (argsMap.get(Keys.BABY) != null) pet.setBaby(Boolean.parseBoolean(argsMap.get(Keys.BABY)));
-			break;
-		case COW:
-			if (argsMap.get(Keys.BABY) != null) pet.setBaby(Boolean.parseBoolean(argsMap.get(Keys.BABY)));
-			break;
-		case DROPPED_ITEM:
-			if (argsMap.get(Keys.TYPE) != null) pet.setDroppedItemType(MbPetsUtils.parseItemStack(argsMap.get(Keys.TYPE)));
-			break;
-		case HORSE:
-			if (argsMap.get(Keys.BABY) != null) pet.setBaby(Boolean.parseBoolean(argsMap.get(Keys.BABY)));
-			if (argsMap.get(Keys.COLOR) != null) pet.setHorseColor(MbPetsUtils.parseHorseColor(argsMap.get(Keys.COLOR)));
-			if (argsMap.get(Keys.STYLE) != null) pet.setHorseStyle(MbPetsUtils.parseHorseStyle(argsMap.get(Keys.STYLE)));
-			break;
-		case IRON_GOLEM:
-			break;
-		case MUSHROOM_COW:
-			if (argsMap.get(Keys.BABY) != null) pet.setBaby(Boolean.parseBoolean(argsMap.get(Keys.BABY)));
-			break;
-		case OCELOT:
-			if (argsMap.get(Keys.BABY) != null) pet.setBaby(Boolean.parseBoolean(argsMap.get(Keys.BABY)));
-			if (argsMap.get(Keys.STYLE) != null) pet.setOcelotStyle(MbPetsUtils.parseOcelotType(argsMap.get(Keys.STYLE)));
-			break;
-		case PIG:
-			if (argsMap.get(Keys.BABY) != null) pet.setBaby(Boolean.parseBoolean(argsMap.get(Keys.BABY)));
-			break;
-		case SHEEP:
-			if (argsMap.get(Keys.BABY) != null) pet.setBaby(Boolean.parseBoolean(argsMap.get(Keys.BABY)));
-			if (argsMap.get(Keys.COLOR) != null) pet.setColor(MbPetsUtils.parseColor(argsMap.get(Keys.COLOR)));
-			break;
-		case SKELETON_HORSE:
-			if (argsMap.get(Keys.BABY) != null) pet.setBaby(Boolean.parseBoolean(argsMap.get(Keys.BABY)));
-			break;
-		case UNDEAD_HORSE:
-			if (argsMap.get(Keys.BABY) != null) pet.setBaby(Boolean.parseBoolean(argsMap.get(Keys.BABY)));
-			break;
-		case WOLF:
-			if (argsMap.get(Keys.BABY) != null) pet.setBaby(Boolean.parseBoolean(argsMap.get(Keys.BABY)));
-			if (argsMap.get(Keys.COLOR) != null) pet.setColor(MbPetsUtils.parseColor(argsMap.get(Keys.COLOR)));
-			break;
-		default:	
-		}
-		pet.setOwner(player); 	
-		if (argsMap.get(Keys.NAME) != null) pet.setName(argsMap.get(Keys.NAME) != null ? argsMap.get(Keys.NAME) : "");
-		pet.setPrice();
-		MbPets.getInstance().addPreparedPet(pet);
-		pet.printStatus(false);
-	}
-
-	/**
-	 * prints some help
-	 * 
-	 * @param argsMap
-	 *            the chat input in a HashMap<MbPetUtils.Keys, String)
-	 * @param player
-	 *            or commandSender
-	 */
-	private void showHelp(HashMap<Keys, String> argsMap, Player player) {
-		if (!player.hasPermission("MbPets.print")) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPermission"));
-			return;
-		}
-		if (argsMap.get(Keys.TYPE) == null) {
-			// user only entered /pet help
-			player.sendMessage(MbPetsUtils.getTextNode("help.Options"));
-			return;
-		}
-		player.sendMessage(MbPetsUtils.getTextNode("help.Head"));
-		DisguiseType type = MbPetsUtils.parseType(argsMap.get(Keys.TYPE)) != null ? MbPetsUtils.parseType(argsMap.get(Keys.TYPE)) : DisguiseType.DROPPED_ITEM;
-		switch (type) {
-		case CHICKEN:
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Baby").replace("{1}", MbPetsUtils.getTextNode("help.BABY")));
-			break;
-		case COW:
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Baby").replace("{1}", MbPetsUtils.getTextNode("help.BABY")));
-			break;
-		case DROPPED_ITEM:
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Typ").replace("{1}", MbPetsUtils.getTextNode("help.DROPPEDITEMTYPE")));
-			break;
-		case HORSE:
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Baby").replace("{1}", MbPetsUtils.getTextNode("help.BABY")));
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Color").replace("{1}", MbPetsUtils.getTextNode("help.HORSECOLOR")));
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Style").replace("{1}", MbPetsUtils.getTextNode("help.HORSESTYLE")));
-			break;
-		case MUSHROOM_COW:
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Baby").replace("{1}", MbPetsUtils.getTextNode("help.BABY")));
-			break;
-		case OCELOT:
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Baby").replace("{1}", MbPetsUtils.getTextNode("help.BABY")));
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Style").replace("{1}", MbPetsUtils.getTextNode("help.OCELOTSTYLE")));
-			break;
-		case PIG:
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Baby").replace("{1}", MbPetsUtils.getTextNode("help.BABY")));
-			break;
-		case SHEEP:
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Baby").replace("{1}", MbPetsUtils.getTextNode("help.BABY")));
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Color").replace("{1}", MbPetsUtils.getTextNode("help.COLOR")));
-			break;
-		case SKELETON_HORSE:
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Baby").replace("{1}", MbPetsUtils.getTextNode("help.BABY")));
-			break;
-		case UNDEAD_HORSE:
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Baby").replace("{1}", MbPetsUtils.getTextNode("help.BABY")));
-			break;
-		case WOLF:
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Baby").replace("{1}", MbPetsUtils.getTextNode("help.BABY")));
-			player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Color").replace("{1}", MbPetsUtils.getTextNode("help.COLOR")));
-			break;
-		default:
-			player.sendMessage(ChatColor.DARK_GREEN+"keine");
-			return;
-		}
-		player.sendMessage(MbPetsUtils.getTextNode("info.Element").replace("{0}", ChatColor.DARK_GREEN+"Name").replace("{1}", MbPetsUtils.getTextNode("help.NAME")));
-	}
-
-	/**
-	 * prints info for the given pet
-	 * 
-	 * @param player
-	 * @param argsMap
-	 * @throws SQLException
-	 */
-	private void showInfo(final Player player,
-			final HashMap<Keys, String> argsMap) throws SQLException {
-		MbPets.getInstance().getServer().getScheduler()
-				.runTaskAsynchronously(MbPets.getInstance(), new Runnable() {
-					public void run() {
-						PreparedStatement statement;
-						Connection con = DatabaseConnectionManager
-								.getInstance().getConnection();
-						ResultSet res;
-						Pet pet = new Pet();
-						if (!player.hasPermission("MbPets.info")) {
-							player.sendMessage(MbPetsUtils
-									.getTextNode("error.noPermission"));
-							return;
-						}
-						if (con == null) {
-							player.sendMessage(MbPetsUtils
-									.getTextNode("error.noDbConnection"));
-							return;
-						}
-						if (argsMap.get(MbPetsUtils.Keys.NUMBER) == null) {
-							player.sendMessage(MbPetsUtils.getTextNode(
-									"error.missingValue").replace("{0}",
-									"Number"));
-							return;
-						}
-						try {
-							statement = con
-									.prepareStatement("Select * from MbPets_Pet where playerid = (Select playerid from MbPets_Player where uuid = ?) and number = ?");
-							statement.setString(1, player.getUniqueId()
-									.toString());
-							statement.setInt(2, Integer.parseInt(argsMap
-									.get(MbPetsUtils.Keys.NUMBER)));
-							res = statement.executeQuery();
-							if (res.first()) {
-								// reconstruct the pet
-								pet.setType(MbPetsUtils.parseType(res
-										.getString("type")));
-								pet.setDroppedItemType(MbPetsUtils
-										.parseItemStack(res.getString("type")));
-								pet.setColor(MbPetsUtils.parseColor(res
-										.getString("color")));
-								pet.setHorseColor(MbPetsUtils
-										.parseHorseColor(res
-												.getString("horsecolor")));
-								pet.setHorseStyle(MbPetsUtils
-										.parseHorseStyle(res
-												.getString("horsestyle")));
-								pet.setOcelotStyle(MbPetsUtils
-										.parseOcelotType(res
-												.getString("ocelotstyle")));
-								pet.setName(res.getString("customname") != null ? res
-										.getString("customname") : null);
-								pet.setBaby(res.getBoolean("baby"));
-								pet.setOwner(player);
-								pet.printStatus(true);
-							} else {
-								player.sendMessage(MbPetsUtils.getTextNode(
-										"error.noPetToCall").replace("{0}",
-										"Du"));
-								return;
-							}
-						} catch (SQLException e) {
-
-						}
-					}
-				});
-
-	}
-
-	/**
-	 * shows a list of all pets owned by the given player
-	 * 
-	 * @param argsMap
-	 *            the chat input in a HashMap<MbPetUtils.Keys, String)
-	 * @param player
-	 *            or commandSender
-	 * @throws SQLException
-	 */
-	private void showList(HashMap<Keys, String> argsMap, Player player)
-			throws SQLException {
-		Connection con = DatabaseConnectionManager.getInstance()
+	private void sellPet(final ChatInput chatInput) {
+		Connection connection = DatabaseConnectionManager.getInstance()
 				.getConnection();
-		if (!player.hasPermission("MbPets.print")) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPermission"));
+		if (!chatInput.getSender().hasPermission("MbPets.sell")) {
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("error.noPermission"));
 			return;
 		}
-		if (con == null) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noDbConnection"));
+		if (connection == null) {
+			chatInput.getSender().sendMessage(
+					MbPetsConfig.getTextNode("error.noDbConnection"));
 			return;
 		}
-		if (argsMap.get(MbPetsUtils.Keys.PLAYER) != null) {
-			String targetPlayerUUID = MbPets.getInstance().getPluginUuidDb()
-					.getUUIDByName(argsMap.get(MbPetsUtils.Keys.PLAYER));
-			if (targetPlayerUUID != null) {
-				// player exists
-				OfflinePlayer offlinePlayer = MbPets.getInstance().getServer()
-						.getOfflinePlayer(UUID.fromString(targetPlayerUUID));
-				printList(player, offlinePlayer);
+		try {
+			Integer number = chatInput.getNumber() != null ? chatInput
+					.getNumber() : MbPets.getLatestPetNumber(chatInput
+					.getSender());
+			Pet pet = MbPets.getInstance()
+					.getPet(chatInput.getSender(), number);
+			if (pet != null) {
+				Double price = pet.sell();
+				chatInput.getSender().sendMessage(MbPetsConfig.getTextNode("info.petSold").replace("{0}", pet.getName()).replace("{1}", price.toString()));
 			} else {
-				player.sendMessage(MbPetsUtils
-						.getTextNode("error.playerUnknown"));
+				chatInput.getSender().sendMessage(
+						MbPetsConfig.getTextNode("error.noPetToCall").replace("{0}",
+								"Du"));
 			}
-		} else {
-			printList(player, player);
-		}
+			connection.close();
+		} catch (SQLException e) {
 
+			e.printStackTrace();
+		}
 	}
 
 	/**
-	 * prints some stuff about db connectivity, number of spawned pets, number
-	 * of preparedPets
-	 */
-	private void showMonitor(CommandSender sender) {
-		if (!sender.hasPermission("MbPets.monitor")) {
-			sender.sendMessage(MbPetsUtils.getTextNode("error.noPermission"));
-			return;
-		}
-		sender.sendMessage(MbPetsUtils
-				.getTextNode("info.monitorDB")
-				.replace(
-						"{0}",
-						MbPets.getInstance().isDbIsCurrentlyAvailable() ? ChatColor.GREEN
-								+ "aktiv"
-								: ChatColor.RED + "inaktiv"));
-		sender.sendMessage(MbPetsUtils
-				.getTextNode("info.monitorSpawnedPets")
-				.replace("{0}",
-						Integer.toString(MbPets.getInstance().getPets().size())));
-		sender.sendMessage(MbPetsUtils.getTextNode("info.monitorPreparedPets")
-				.replace(
-						"{0}",
-						Integer.toString(MbPets.getInstance().getPreparedPets()
-								.size())));
-		sender.sendMessage(MbPets.getInstance().getDescription().getVersion());
-	}
-
-	/**
-	 * prints the status of the players current configuration
+	 * uncalls the given players pet
 	 * 
-	 * @param player
-	 *            or commandSender
+	 * @param sender
 	 */
-	private void showStatus(Player player) {
-		Pet pet = MbPets.getInstance().getPreparedPet(player);
-		if (!player.hasPermission("MbPets.print")) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPermission"));
+	private void uncallPet(Player sender) {
+		if (!sender.getPlayer().hasPermission("MbPets.call")) {
+			sender.getPlayer().sendMessage(
+					MbPetsConfig.getTextNode("error.noPermission"));
 			return;
 		}
+		Pet pet = MbPets.getInstance().getPets().get(sender);
 		if (pet != null) {
-			pet.printStatus(false);
+			pet.uncall();
+			sender.sendMessage(MbPetsConfig.getTextNode("info.petUncalled"));
 		} else {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPreparedPets"));
+			sender.sendMessage(MbPetsConfig.getTextNode("error.noActivePet"));
 		}
 	}
 
-	/**
-	 * despawns the pet and removes it from the list
-	 * 
-	 * @param player
-	 *            or commandSender
-	 */
-	private void uncallPet(Player player) {
-		Pet pet = MbPets.getInstance().getPet(player);
-		if (!player.hasPermission("MbPets.call")) {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noPermission"));
-			return;
-		}
-		if (pet != null) {
-			pet.getEntity().remove();
-			MbPets.getInstance().removePet(player);
-			player.sendMessage(MbPetsUtils.getTextNode("info.petUncalled"));
-		} else {
-			player.sendMessage(MbPetsUtils.getTextNode("error.noActivePet"));
-		}
-
-	}
-
-	/**
-	 * tab complete for all usable values
-	 */
-	public List<String> onTabComplete(CommandSender sender, Command command,
-			String alias, String[] args) {
-		ArrayList<String> list = new ArrayList<String>();
-		if (args.length > 1) {
-			Keys key = Keys.getKey(args[args.length - 2]);
-			String arg = args[args.length - 1];
-			if (key != null) {
-				switch (key) {
-				case BABY:
-					list.add("true");
-					list.add("false");
-				case COLOR:
-					for (String s : MbPets.getInstance().getConfig()
-							.getConfigurationSection("animalColors")
-							.getKeys(true)) {
-						if (MbPetsUtils
-								.parseConfigurationSectionForTabComplete(
-										"animalColors." + s, arg) != null) {
-							list.add(WordUtils.capitalize(MbPetsUtils
-									.parseConfigurationSectionForTabComplete(
-											"animalColors." + s, arg)
-									.toLowerCase()));
-						}
-					}
-					for (String s : MbPets.getInstance().getConfig()
-							.getConfigurationSection("horseColors")
-							.getKeys(true)) {
-						if (MbPetsUtils
-								.parseConfigurationSectionForTabComplete(
-										"horseColors." + s, arg) != null) {
-							list.add(WordUtils.capitalize(MbPetsUtils
-									.parseConfigurationSectionForTabComplete(
-											"horseColors." + s, arg)
-									.toLowerCase()));
-						}
-					}
-					break;
-				case NUMBER:
-					list.add(Integer.toString(MbPetsUtils
-							.getNumberOfPets((Player) sender)));
-					break;
-				case NAME: 
-					for (String s : MbPets.getInstance().getConfig()
-							.getConfigurationSection("chatColors")
-							.getKeys(true)) {
-						if (MbPetsUtils
-								.parseConfigurationSectionForTabComplete(
-										"chatColors." + s, arg) != null) {
-							list.add(WordUtils.capitalize(MbPetsUtils
-									.parseConfigurationSectionForTabComplete(
-											"chatColors." + s, arg)
-									.toLowerCase()));
-						}
-					}
-					break;
-				case STYLE:
-					for (String s : MbPets.getInstance().getConfig()
-							.getConfigurationSection("horseStyles")
-							.getKeys(true)) {
-						if (MbPetsUtils
-								.parseConfigurationSectionForTabComplete(
-										"horseStyles." + s, arg) != null) {
-							list.add(WordUtils.capitalize(MbPetsUtils
-									.parseConfigurationSectionForTabComplete(
-											"horseStyles." + s, arg)
-									.toLowerCase()));
-						}
-					}
-					for (String s : MbPets.getInstance().getConfig()
-							.getConfigurationSection("ocelotStyles")
-							.getKeys(true)) {
-						if (MbPetsUtils
-								.parseConfigurationSectionForTabComplete(
-										"ocelotStyles." + s, arg) != null) {
-							list.add(WordUtils.capitalize(MbPetsUtils
-									.parseConfigurationSectionForTabComplete(
-											"ocelotStyles." + s, arg)
-									.toLowerCase()));
-						}
-					}
-					break;
-				case TYPE:
-					for (String s : MbPets.getInstance().getConfig()
-							.getConfigurationSection("disguiseTypes")
-							.getKeys(true)) {
-						if (MbPetsUtils
-								.parseConfigurationSectionForTabComplete(
-										"disguiseTypes." + s, arg) != null) {
-							list.add(WordUtils.capitalize(MbPetsUtils
-									.parseConfigurationSectionForTabComplete(
-											"disguiseTypes." + s, arg)
-									.toLowerCase()));
-						}
-					}
-					for (String s : MbPets.getInstance().getConfig()
-							.getConfigurationSection("droppedItems")
-							.getKeys(true)) {
-						if (MbPetsUtils
-								.parseConfigurationSectionForTabComplete(
-										"droppedItems." + s, arg) != null) {
-							list.add(WordUtils.capitalize(MbPetsUtils
-									.parseConfigurationSectionForTabComplete(
-											"droppedItems." + s, arg)
-									.toLowerCase()));
-						}
-					}
-					break;
-				default:
-					break;
-				}
-
-			}
-		}
-		//remove duplicates & sort
-		List<String> ret = new ArrayList<String>();
-		ret.addAll(new HashSet<String>(list));
-		Collections.sort(ret);
-		return ret;
-	}
 }

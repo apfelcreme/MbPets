@@ -1,0 +1,592 @@
+enabled: false
+mysql:
+  dbuser: 'root'
+  dbpassword: ''
+  database: 'mbpets5'
+  url: 'localhost'
+texts:
+  info:
+    StatusHeader: '{DARK_GREEN}Dein Pet ({GREEN}{0}{DARK_GREEN}) sieht bis jetzt so
+      aus:'
+    Confirm: "{DARK_GREEN}Um den Kauf abzuschlie\xdfen, gib {GREEN}/pet confirm{DARK_GREEN}\
+      \ ein!\n\n"
+    Element: '{DARK_GREEN}{0}: {GREEN}{1}'
+    petConfirmed: '{GREEN}Du hast erfolgreich ein Pet gekauft!'
+    petRightclick: "{DARK_GREEN}Rechtsklicke innerhalb der n\xe4chsten {GREEN}10 Sekunden{DARK_GREEN}\
+      \ das Tier, welches du zum Pet machen willst!"
+    petRightclickEnd: '{DARK_GREEN}Die Zeit ist abgelaufen!'
+    petDeleted: "{GREEN}Das Pet wurde erfolgreich gel\xf6scht!"
+    petsFlushed: "{GREEN}Die Pets dieses Spielers wurden gel\xf6scht!"
+    preparedPetCanceled: "{GREEN}Deine Auswahl wurde zur\xfcckgesetzt!"
+    types: "{DARK_GREEN}Folgende Pet-Typen stehen dir zur Verf\xfcgung: "
+    listHead: '{DARK_GREEN}{0} besitzt folgende Pets:'
+    listElement: '{DARK_GREEN}{0}{GREEN}. {1} {DARK_GREEN}{2}'
+    petUncalled: '{GREEN}Du hast dein Pet weggeschickt!'
+    petSold: "{DARK_GREEN}Du hast {GREEN}{0}{DARK_GREEN} f\xfcr {GREEN}{1}{DARK_GREEN}\
+      \ Benches verkauft!"
+    monitorDB: '{DARK_GREEN}Die Datenbank ist derzeit {0}'
+    monitorSpawnedPets: '{DARK_GREEN}Derzeit aktive Pets: {GREEN}{0}'
+    monitorPreparedPets: '{DARK_GREEN}Derzeit bearbeitete Pets: {GREEN}{0}'
+    monitorVersion: '{DARK_GREEN}Derzeitige Plugin-Version: {GREEN}{0}'
+    despawnCount: '{DARK_GREEN}Es wurden {GREEN}{0}{DARK_GREEN} Pets entfernt'
+    despawnCountRange: '{DARK_GREEN}Es wurden {GREEN}{0}{DARK_GREEN} Pets in einer
+      Entfernung von {GREEN}{1}{DARK_GREEN} entfernt'
+    configRegenerated: '{DARK_GREEN}Die Config wurde neu generiert! Eine Kopie der
+      alten Config wurde angelegt.'
+    configReloaded: '{DARK_GREEN}Die Config wurde neu geladen!'
+  help:
+    Options: "{DARK_GREEN}Folgende Optionen stehen dir zur Verf\xfcgung:\n{GREEN}/pet\
+      \ type/color/style/name/baby{WHITE} - {DARK_GREEN}Legt die jeweilige Eigenschaft\
+      \ des zu erstellenden Pets fest.\n{GREEN}/pet confirm{WHITE} - {DARK_GREEN}Schlie\xdf\
+      t die Pet-Konfiguration ab und kauft das Pet.\n{GREEN}/pet call [#]{WHITE} -\
+      \ {DARK_GREEN}Ruft das letzte gekaufte Pet bzw jenes mit der angegeben Nummer.\n\
+      {GREEN}/pet cancel{WHITE} - {DARK_GREEN}Bricht deine derzeitige Pet-Konfiguration\
+      \ ab.\n{GREEN}/pet info [#]{WHITE} - {DARK_GREEN}Zeigt die Eigenschaften des\
+      \ Pets mit der angegebenen Nummer.\n{GREEN}/pet list [player <name>]{WHITE}\
+      \ - {DARK_GREEN}Zeigt deine Pets bzw die Pets eines Mitspielers an.\n{GREEN}/pet\
+      \ status{WHITE} - {DARK_GREEN}Zeigt deine derzeitige Pet-Konfiguration an.\n\
+      {GREEN}/pet uncall{WHITE} - {DARK_GREEN}Schickt das derzeit gerufene Pet weg.\n\
+      \ \n{DARK_GREEN}Bei Fragen zu den Pet-Eigenschaften gib {GREEN}/pet help type\
+      \ <Typ>{DARK_GREEN} ein!"
+    Types: "{DARK_GREEN}Lass dir mit {GREEN}/pet help type <type>{DARK_GREEN} die\
+      \ Hilfe f\xfcr verschiedene Pet-Typen anzeigen!"
+    Head: "{DARK_GREEN}Folgende Optionen kannst du f\xfcr diese Pets treffen:"
+    BABY: '{DARK_GRAY}true/false'
+    NAME: "{DARK_GRAY}Jeder Name, der kein Leerzeichen enth\xe4lt"
+  error:
+    noPermission: '{RED}Du hast keine ausreichende Berechtigung!'
+    missingValue: "{RED}F\xfcr die Option {DARK_RED}{0}{RED} fehlt der Wert!"
+    noDbConnection: '{RED}Die Verbindung zur Datenbank wurde unterbrochen!'
+    wrongFunction: "{DARK_RED}{0}{RED} ist keine g\xfcltige Option!"
+    noPetToCall: '{RED}{0} besitzt keine Pets!'
+    noPreparedPets: '{RED}Du erstellst gerade kein Pet!'
+    missingType: "{RED}Du kannst keine Eigenschaften festlegen, bevor du nicht den\
+      \ Typ des Pets gew\xe4hlt hast! Gib {DARK_RED}/pet help{RED} f\xfcr Hilfe ein!"
+    noActivePet: '{RED}Du hast derzeit kein Pet gerufen!'
+    notThatManyPets: '{RED}Du hast nicht so viele Pets!'
+    notThatMuchMoney: "{RED}Du hast nicht gen\xfcgend Benches!"
+    playerOffline: '{RED}Der Spieler ist offline!'
+    playerUnknown: '{RED}Der Spieler ist unbekannt!'
+    entityIsAlreadyAPet: "{RED}Das gew\xe4hlte Tier ist bereits ein Pet!"
+    notYourPet: "{RED}Das gew\xe4hlte Tier ist bereits auf jemand anderen gesichert!"
+    petNotFinished: |-
+      {RED}Du hast noch nicht alle Eigenschaften angegeben!
+       Gib sie mit {DARK_RED}/pet <Eigenschaft> <Wert>{RED} an!
+    noVault: "{RED}Dieser Server unterst\xfctzt keine Economy!\n Wechsle mit {DARK_RED}/server{RED}\
+      \ auf einen anderen Server, um ein Pet zu kaufen!"
+disguiseTypes:
+  COW:
+    displaytext: Kuh
+    aliases:
+    - KUH
+    - COW
+  HORSE:
+    displaytext: Pferd
+    aliases:
+    - HORSE
+    - PFERD
+  UNDEAD_HORSE:
+    displaytext: Zombiepferd
+    aliases:
+    - ZOMBIEPFERD
+    - ZOMBIEHORSE
+    - UNDEAD_HORSE
+  SKELETON_HORSE:
+    displaytext: Skelettpferd
+    aliases:
+    - SKELETTPFERD
+    - SKELETTHORSE
+    - SEKELTON_HORSE
+  WOLF:
+    displaytext: Hund
+    aliases:
+    - WOLF
+    - DOG
+    - HUND
+  OCELOT:
+    displaytext: Katze
+    aliases:
+    - OCELOT
+    - CAT
+    - KATZE
+  PIG:
+    displaytext: Schwein
+    aliases:
+    - PIG
+    - SCHWEIN
+  IRON_GOLEM:
+    displaytext: Eisengolem
+    aliases:
+    - IRON_GOLEM
+    - EISENGOLEM
+    - IRONGOLEM
+    - GOLEM
+  CHICKEN:
+    displaytext: Huhn
+    aliases:
+    - CHICKEN
+    - CHICK
+    - HUHN
+    - "K\xdcKEN"
+    - "H\xdcHNCHEN"
+  MUSHROOM_COW:
+    displaytext: Pilzkuh
+    aliases:
+    - MUSHROOMCOW
+    - MUSHROOM-COW
+    - MUSHROOM_COW
+    - MOOSHROOM
+    - PILZKUH
+  SHEEP:
+    displaytext: Schaf
+    aliases:
+    - SHEEP
+    - SCHAF
+    - PULLOVERSCHWEIN
+  RABBIT:
+    displaytext: Hase
+    aliases:
+    - RABBIT
+    - HASE
+    - "H\xc4SCHEN"
+    - KANINCHEN
+    - KLOPFER
+    - KARNICKEL
+    - BUNNY
+  ENDERMAN:
+    displaytext: Enderman
+    aliases:
+    - ENDERMAN
+    - ENDERMEN
+    - ENDER
+    - SLENDERMAN
+  SLIME:
+    displaytext: Slime
+    aliases:
+    - SLIME
+    - SCHLEIM
+  MAGMA_CUBE:
+    displaytext: Magmacube
+    aliases:
+    - MAGMA_CUBE
+    - MAGMA-CUBE
+    - MAGMACUBE
+    - MAGMA
+    - LAVACUBE
+  DROPPED_ITEM:
+    displaytext: Item
+    aliases:
+    - DROPPED_ITEM
+    - DROPPEDITEM
+    DIAMOND:
+      displaytext: Diamant
+      aliases:
+      - DIAMOND
+      - DIAMANT
+      - DIA
+    TNT:
+      displaytext: TnT
+      aliases:
+      - TNT
+      - SPRENGSTOFF
+    OBSIDIAN:
+      displaytext: Feuerteufel
+      aliases:
+      - OBSIDIAN
+      - TEUFEL
+      - TEUFEL
+      - FEUERTEUFEL
+    SNOW_BLOCK:
+      displaytext: Eisengel
+      aliases:
+      - SNOW_BLOCK
+      - SNOW-BLOCK
+      - SNOW
+      - ENGEL
+      - ANGEL
+      - EISENGEL
+  FALLING_BLOCK:
+    displaytext: Block
+    aliases:
+    - FALLING_BLOCK
+    - FALLINGBLOCK
+    DIAMOND_BLOCK:
+      displaytext: Diamantblock
+      aliases:
+      - DIAMOND_BLOCK
+      - DIAMOND-BLOCK
+      - DIAMANTBLOCK
+      - DIAMONDBLOCK
+      - DIABLOCK
+    GOLD_BLOCK:
+      displaytext: Goldblock
+      aliases:
+      - GOLD_BLOCK
+      - GOLD-BLOCK
+      - GOLDBLOCK
+    IRON_BLOCK:
+      displaytext: Eisenblock
+      aliases:
+      - IRON_BLOCK
+      - IRON-BLOCK
+      - IRONBLOCK
+      - EISENBLOCK
+    LAPIS_BLOCK:
+      displaytext: Lapislazuliblock
+      aliases:
+      - LAPIS_BLOCK
+      - LAPIS-BLOCK
+      - LAPISBLOCK
+      - LAPISLAZULIBLOCK
+      - LAPISLAZULI_BLOCK
+    GRASS:
+      displaytext: Grasblock
+      aliases:
+      - GRASS
+      - "GRA\xdf"
+      - GRAS
+      - GRASBLOCK
+      - GRASSBLOCK
+      - "GRA\xdfBLOCK"
+    CAKE_BLOCK:
+      displaytext: Kuchen
+      aliases:
+      - CAKE_BLOCK
+      - CAKE-BLOCK
+      - CAKEBLOCK
+      - KUCHEN
+      - KUCHENBLOCK
+    WORKBENCH:
+      displaytext: Werkbank
+      aliases:
+      - WORKBENCH
+      - MINEBENCH
+      - CRAFTING_TABLE
+      - CRAFTINGTABLE
+animalColors:
+  BLACK:
+    displaytext: Schwarz
+    aliases:
+    - BLACK
+    - SCHWARZ
+    - DUNKEL
+  BLUE:
+    displaytext: Blau
+    aliases:
+    - BLUE
+    - BLAU
+  BROWN:
+    displaytext: Braun
+    aliases:
+    - BROWN
+    - BRAUN
+  CYAN:
+    displaytext: Cyan
+    aliases:
+    - CYAN
+    - "T\xdcRKIS"
+  GRAY:
+    displaytext: Grau
+    aliases:
+    - GRAY
+    - GRAU
+  GREEN:
+    displaytext: "Gr\xfcn"
+    aliases:
+    - GREEN
+    - GRUEN
+    - "GR\xdcN"
+    - GRAS
+  LIGHT_BLUE:
+    displaytext: Hellblau
+    aliases:
+    - LIGHT_BLUE
+    - LIGHT-BLUE
+    - LIGHTBLUE
+    - HELLBLAU
+    - HIMMELBLAU
+    - HIMMEL
+  LIME:
+    displaytext: Limette
+    aliases:
+    - LIME
+    - LIMETTE
+  MAGENTA:
+    displaytext: Magenta
+    aliases:
+    - MAGENTA
+  ORANGE:
+    displaytext: Orange
+    aliases:
+    - ORANGE
+  PINK:
+    displaytext: Pink
+    aliases:
+    - PINK
+    - ROSA
+  PURPLE:
+    displaytext: Lila
+    aliases:
+    - PURPLE
+    - VIOLETT
+    - LILA
+  RED:
+    displaytext: Rot
+    aliases:
+    - RED
+    - ROT
+  SILVER:
+    displaytext: Silber
+    aliases:
+    - SILVER
+    - SILBER
+  WHITE:
+    displaytext: "Wei\xdf"
+    aliases:
+    - WHITE
+    - "WEI\xdf"
+    - WEISS
+  YELLOW:
+    displaytext: Gelb
+    aliases:
+    - YELLOW
+    - GELB
+horseColors:
+  BLACK:
+    displaytext: Schwarz
+    aliases:
+    - BLACK
+    - SCHWARZ
+    - DUNKEL
+  BROWN:
+    displaytext: Braun
+    aliases:
+    - BROWN
+    - BRAUN
+  CHESTNUT:
+    displaytext: Kastanie
+    aliases:
+    - CHESTNUT
+    - KASTANIE
+    - NUSS
+  CREAMY:
+    displaytext: Cremig
+    aliases:
+    - CREAMY
+    - CREMIG
+    - KREMIG
+  DARK_BROWN:
+    displaytext: Dunkelbraun
+    aliases:
+    - DARK_BROWN
+    - DARK-BROWN
+    - DARKBROWN
+    - DUNKELBRAUN
+  GRAY:
+    displaytext: Grau
+    aliases:
+    - GRAY
+    - GRAU
+  WHITE:
+    displaytext: "Wei\xdf"
+    aliases:
+    - WHITE
+    - "WEI\xdf"
+    - WEISS
+horseStyles:
+  BLACK_DOTS:
+    displaytext: Schwarzfleckig
+    aliases:
+    - BLACK_DOTS
+    - BLACK-DOTS
+    - BLACK
+    - SCHWARZ
+    - SCHWARZFLECKIG
+    - BLACKDOTTED
+  NONE:
+    displaytext: Keiner
+    aliases:
+    - NONE
+    - KEINS
+    - KEINE
+    - KEIN
+    - KEINER
+  WHITE:
+    displaytext: "Wei\xdf"
+    aliases:
+    - WHITE
+    - "WEI\xdf"
+    - WEISS
+  WHITE_DOTS:
+    displaytext: "Wei\xdffleckig"
+    aliases:
+    - WHITE_DOTS
+    - WHITE-DOTS
+    - "WEI\xdfFLECKIG"
+    - WEISSFLECKIG
+    - WHITEDOTTED
+  WHITEFIELD:
+    displaytext: Milchig
+    aliases:
+    - WHITEFIELD
+    - "WEI\xdfFELD"
+    - WEISSFELD
+    - MILCHIG
+    - VERSCHWOMMEN
+ocelotStyles:
+  WILD_OCELOT:
+    displaytext: Wild
+    aliases:
+    - WILD_OCELOT
+    - WILD-OCELOT
+    - WILDOCELOT
+    - WILD
+  BLACK_CAT:
+    displaytext: Schwarz
+    aliases:
+    - BLACK_CAT
+    - BLACK-CAT
+    - BLACKCAT
+    - BLACK
+    - SCHWARZ
+    - DUNKEL
+  RED_CAT:
+    displaytext: Rot
+    aliases:
+    - RED_CAT
+    - RED-CAT
+    - REDCAT
+    - RED
+    - ROT
+  SIAMESE_CAT:
+    displaytext: Siamesisch
+    aliases:
+    - SIAMESE_CAT
+    - SIAMESE-CAT
+    - SIAMESE
+    - SIAMESISCH
+    - SIAM
+rabbitTypes:
+  BLACK:
+    displaytext: Schwarz
+    aliases:
+    - BLACK
+    - SCHWARZ
+    - DUNKEL
+  BROWN:
+    displaytext: Braun
+    aliases:
+    - BROWN
+    - BRAUN
+    - NORMAL
+  GOLD:
+    displaytext: Gold
+    aliases:
+    - GOLD
+    - GELB
+    - HELL
+  PATCHES:
+    displaytext: Fleckig
+    aliases:
+    - PATCHES
+    - FLECKEN
+    - FLECKIG
+    - "SCHWARZ-WEI\xdf"
+    - "SCHWARZWEI\xdf"
+    - SCHWARZ-WEISS
+    - SCHWARZWEISS
+  PEPPER:
+    displaytext: Pfeffer
+    aliases:
+    - PEPPER
+    - PFEFFER
+    - SALZPFEFFER
+    - PFEFFERSALZ
+  WHITE:
+    displaytext: "Wei\xdf"
+    aliases:
+    - WHITE
+    - "WEI\xdf"
+    - WEISS
+  KILLER_BUNNY:
+    displaytext: Killerbunny
+    aliases:
+    - KILLER_BUNNY
+    - KILLER-BUNNY
+    - KILLER
+    - KILLERBUNNY
+    - KILLERHASE
+    - KILLERKANINCHEN
+    - "B\xd6SE"
+slimeSizes:
+  '1':
+    displaytext: Klein
+    aliases:
+    - '1'
+    - EINS
+    - KLEIN
+    - ONE
+    - SHORT
+  '2':
+    displaytext: Mittel
+    aliases:
+    - '2'
+    - ZWEI
+    - MITTEL
+    - TWO
+    - MEDIUM
+  '3':
+    displaytext: "Gro\xdf"
+    aliases:
+    - '3'
+    - DREI
+    - "GRO\xdf"
+    - GROSS
+    - THREE
+    - LARGE
+  '4':
+    displaytext: Riesig
+    aliases:
+    - '4'
+    - VIER
+    - RIESIG
+    - HUGE
+    - FOUR
+prices:
+  WOLF: 10000
+  OCELOT: 10000
+  SHEEP: 15000
+  RABBIT: 15000
+  HORSE: 20000
+  COW: 15000
+  MOOSHROOM: 20000
+  CHICKEN: 15000
+  PIG: 15000
+  DROPPED_ITEM: 25000
+  UNDEAD_HORSE: 30000
+  SKELETON_HORSE: 30000
+  IRON_GOLEM: 30000
+  ENDERMAN: 35000
+  SLIME: 20000
+  MAGMA_CUBE: 30000
+  FALLING_BLOCK: 25000
+  MODIFY: 1000
+  SELL: 0.75
+damage:
+  WOLF: 4
+  OCELOT: 4
+  SHEEP: 3
+  RABBIT: 3
+  HORSE: 4
+  COW: 3
+  MOOSHROOM: 4
+  CHICKEN: 3
+  PIG: 3
+  DROPPED_ITEM: 6
+  UNDEAD_HORSE: 5
+  SKELETON_HORSE: 5
+  IRON_GOLEM: 5
+  ENDERMAN: 6
+  SLIME: 4
+  MAGMA_CUBE: 5
+  FALLING_BLOCK: 5
