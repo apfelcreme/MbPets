@@ -1,8 +1,8 @@
 package io.github.apfelcreme.MbPets.Tasks;
 
 import io.github.apfelcreme.MbPets.Pets.Pet;
-
 import org.bukkit.entity.Creature;
+
 public class FollowTask implements Runnable {
 
 	Pet pet;

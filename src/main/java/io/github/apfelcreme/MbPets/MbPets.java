@@ -1,32 +1,7 @@
 package io.github.apfelcreme.MbPets;
 
-import io.github.apfelcreme.MbPets.Listener.ConvertRightclickListener;
-import io.github.apfelcreme.MbPets.Listener.EntityDamageListener;
-import io.github.apfelcreme.MbPets.Listener.EntityDamagesEntityListener;
-import io.github.apfelcreme.MbPets.Listener.EntityInteractListener;
-import io.github.apfelcreme.MbPets.Listener.EntityRightClickListener;
-import io.github.apfelcreme.MbPets.Listener.NetherPortalEnterListener;
-import io.github.apfelcreme.MbPets.Listener.PlayerLogoutListener;
-import io.github.apfelcreme.MbPets.Pets.AngelPet;
-import io.github.apfelcreme.MbPets.Pets.ChickenPet;
-import io.github.apfelcreme.MbPets.Pets.CowPet;
-import io.github.apfelcreme.MbPets.Pets.DroppedItemPet;
-import io.github.apfelcreme.MbPets.Pets.DevilPet;
-import io.github.apfelcreme.MbPets.Pets.EndermanPet;
-import io.github.apfelcreme.MbPets.Pets.FallingBlockPet;
-import io.github.apfelcreme.MbPets.Pets.HorsePet;
-import io.github.apfelcreme.MbPets.Pets.IronGolemPet;
-import io.github.apfelcreme.MbPets.Pets.MagmaCubePet;
-import io.github.apfelcreme.MbPets.Pets.MooshroomPet;
-import io.github.apfelcreme.MbPets.Pets.OcelotPet;
-import io.github.apfelcreme.MbPets.Pets.Pet;
-import io.github.apfelcreme.MbPets.Pets.PigPet;
-import io.github.apfelcreme.MbPets.Pets.RabbitPet;
-import io.github.apfelcreme.MbPets.Pets.SheepPet;
-import io.github.apfelcreme.MbPets.Pets.SkeletonHorsePet;
-import io.github.apfelcreme.MbPets.Pets.SlimePet;
-import io.github.apfelcreme.MbPets.Pets.UndeadHorsePet;
-import io.github.apfelcreme.MbPets.Pets.WolfPet;
+import io.github.apfelcreme.MbPets.Listener.*;
+import io.github.apfelcreme.MbPets.Pets.*;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -38,7 +13,6 @@ import java.util.Map.Entry;
 import net.milkbowl.vault.Vault;
 import net.milkbowl.vault.economy.Economy;
 import net.zaiyers.AnimalProtect.AnimalProtect;
-import net.zaiyers.bukkit.UUIDDB.UUIDDB;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -82,11 +56,6 @@ public class MbPets extends JavaPlugin {
 	private HashMap<Player, Pet> configurations;
 
 	/**
-	 * the instance of the {@link UUIDDB} plugin
-	 */
-	private UUIDDB pluginUuidDb = null;
-
-	/**
 	 * the instance of the {@link AnimalProtect} plugin
 	 */
 	private AnimalProtect pluginAnimalProtect = null;
@@ -103,8 +72,6 @@ public class MbPets extends JavaPlugin {
 
 	public void onEnable() {
 		//set enabled on plugin load
-		getConfig().set("enabled", true);
-		saveConfig();
 		// create config if necessary
 		if (!getDataFolder().exists()) {
 			getDataFolder().mkdir();
@@ -141,6 +108,8 @@ public class MbPets extends JavaPlugin {
 				new EntityRightClickListener(), this);
 		getServer().getPluginManager().registerEvents(
 				new EntityDamagesEntityListener(), this);
+		getServer().getPluginManager().registerEvents(
+				new PlayerTeleportListener(), this);
 
 		// initialize the db connection
 		DatabaseConnectionManager.getInstance().initConnection(
@@ -150,9 +119,9 @@ public class MbPets extends JavaPlugin {
 				getConfig().getString("mysql.url"));
 
 		// get the plugin instances
-		if (getServer().getPluginManager().getPlugin("UUIDDB") != null) {
-			pluginUuidDb = (UUIDDB) getServer().getPluginManager().getPlugin(
-					"UUIDDB");
+		if (getServer().getPluginManager().getPlugin("UUIDDB") == null) {
+			getLogger().severe("Plugin UUIDDB nicht gefunden!");
+			getServer().getPluginManager().disablePlugin(this);
 		}
 		if (getServer().getPluginManager().getPlugin("AnimalProtect") != null) {
 			pluginAnimalProtect = (AnimalProtect) getServer()
@@ -206,13 +175,6 @@ public class MbPets extends JavaPlugin {
 	 */
 	public ConvertRightclickListener getConvertRightclickListener() {
 		return convertRightclickListener;
-	}
-
-	/**
-	 * @return the pluginUuidDb
-	 */
-	public UUIDDB getPluginUuidDb() {
-		return pluginUuidDb;
 	}
 
 	/**
@@ -323,6 +285,9 @@ public class MbPets extends JavaPlugin {
 			case PIG:
 				pet = new PigPet(player, res.getString("petname"), number,
 						res.getBoolean("baby"));
+				break;
+			case PRIMED_TNT:
+				pet = new PrimedTnTPet(player, res.getString("petname"), number);
 				break;
 			case RABBIT:
 				pet = new RabbitPet(player, res.getString("petname"), number,

@@ -102,7 +102,7 @@ public class WolfPet extends Pet implements Ageable, Dyeable<AnimalColor> {
 
 	@Override
 	public boolean isConfigurationFinished() {
-		return (type != null && owner != null && name != null);
+		return (type != null && owner != null && name != null && color != null);
 	}
 
 }

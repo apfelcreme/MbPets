@@ -1,5 +1,5 @@
 name: MbPets
-version: 2.2
+version: 2.2.3
 main: io.github.apfelcreme.MbPets.MbPets
 depend: [LibsDisguises, UUIDDB]
 softdepend: [AnimalProtect, Vault]

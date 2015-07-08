@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>io.github.apfelcreme.MbPets</groupId>
 	<artifactId>MbPets</artifactId>
-	<version>2.2</version>
+	<version>2.2.3</version>
 	<build>
 		<plugins>
 			<plugin>
@@ -15,28 +15,28 @@
 					<target>1.7</target>
 				</configuration>
 			</plugin>
-			<plugin>
-				<artifactId>maven-shade-plugin</artifactId>
-				<version>2.2</version>
-				<configuration>
-					<artifactSet>
-						<includes>
-							<include>net.zaiyers.bukkit:UUIDDB</include>
-							<include>net.milkbowl.vault:Vault</include>
-							<include>MbAnimalProtect:MbAnimalProtect</include>
-						</includes>
-						<excludes></excludes>
-					</artifactSet>
-				</configuration>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>shade</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+			<!--<plugin>-->
+				<!--<artifactId>maven-shade-plugin</artifactId>-->
+				<!--<version>2.2</version>-->
+				<!--<configuration>-->
+					<!--<artifactSet>-->
+						<!--<includes>-->
+							<!--<include>net.zaiyers:UUIDDB</include>-->
+							<!--<include>net.milkbowl.vault:Vault</include>-->
+							<!--<include>MbAnimalProtect:MbAnimalProtect</include>-->
+						<!--</includes>-->
+						<!--<excludes></excludes>-->
+					<!--</artifactSet>-->
+				<!--</configuration>-->
+				<!--<executions>-->
+					<!--<execution>-->
+						<!--<phase>package</phase>-->
+						<!--<goals>-->
+							<!--<goal>shade</goal>-->
+						<!--</goals>-->
+					<!--</execution>-->
+				<!--</executions>-->
+			<!--</plugin>-->
 		</plugins>
 	</build>
 	<repositories>
@@ -68,22 +68,22 @@
 		</repository>
 	</repositories>
 	<dependencies>
-	    <!-- dependency>
-			<groupId>org.spigotmc</groupId>
-			<artifactId>spigot-api</artifactId>
-			<version>1.8-R0.1-SNAPSHOT</version>
-			<type>jar</type>
-		</dependency -->
+	    <!--<dependency>-->
+			<!--<groupId>org.spigotmc</groupId>-->
+			<!--<artifactId>spigot-api</artifactId>-->
+			<!--<version>1.8-R0.1-SNAPSHOT</version>-->
+			<!--<type>jar</type>-->
+		<!--</dependency>-->
 	    <dependency>
 			<groupId>org.spigotmc</groupId>
 			<artifactId>spigot</artifactId>
-			<version>1.8-R0.1-SNAPSHOT</version>
+			<version>1.8.3-R0.1-SNAPSHOT</version>
 			<type>jar</type>
 		</dependency>
 		<dependency>
-			<groupId>net.zaiyers.bukkit</groupId>
+			<groupId>net.zaiyers</groupId>
 			<artifactId>UUIDDB</artifactId>
-			<version>1.0</version>
+			<version>1.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 		    <groupId>com.comphenix.protocol</groupId>
@@ -93,7 +93,7 @@
 		<dependency>
 			<groupId>LibsDisguises</groupId>
 			<artifactId>LibsDisguises</artifactId>
-			<version>8.2.7</version>
+			<version>8.3.1</version>
 		</dependency>
 		<dependency>
 			<groupId>net.milkbowl.vault</groupId>

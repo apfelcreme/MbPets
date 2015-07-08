@@ -2,19 +2,17 @@ package io.github.apfelcreme.MbPets;
 
 import io.github.apfelcreme.MbPets.Interfaces.DroppedItem;
 import io.github.apfelcreme.MbPets.Interfaces.FallingBlock;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import me.libraryaddict.disguise.disguisetypes.AnimalColor;
 import me.libraryaddict.disguise.disguisetypes.DisguiseType;
 import me.libraryaddict.disguise.disguisetypes.RabbitType;
-
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Horse;
 import org.bukkit.entity.Ocelot;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Collection of all config-related stuff
@@ -185,6 +183,12 @@ public class MbPetsConfig {
 				.set("disguiseTypes.MAGMA_CUBE.aliases",
 						Arrays.asList("MAGMA_CUBE", "MAGMA-CUBE", "MAGMACUBE", "MAGMA",
 								"LAVACUBE"));
+		MbPets.getInstance().getConfig().set("disguiseTypes.PRIMED_TNT.displaytext", "Explodierendes TNT");
+		MbPets.getInstance()
+				.getConfig()
+				.set("disguiseTypes.PRIMED_TNT.aliases",
+						Arrays.asList("PRIMED_TNT", "PRIMEDTNT", "TNT", "SPRENGSTOFF",
+								"EXPLOSION", "EXPLODIERENDES_TNT", "EXPLODIERENDESTNT", "EXPLODIERENDES-TNT"));
 		//these 2 are just for from-db-reconstruction
 		MbPets.getInstance().getConfig().set("disguiseTypes.DROPPED_ITEM.displaytext", "Item");
 		MbPets.getInstance()
@@ -208,8 +212,8 @@ public class MbPetsConfig {
 				.set("disguiseTypes.DROPPED_ITEM.DIAMOND.aliases",
 						Arrays.asList("DIAMOND", "DIAMANT", "DIA"));
 		MbPets.getInstance().getConfig().set("disguiseTypes.DROPPED_ITEM.TNT.displaytext", "TnT");
-		MbPets.getInstance().getConfig()
-				.set("disguiseTypes.DROPPED_ITEM.TNT.aliases", Arrays.asList("TNT", "SPRENGSTOFF"));
+//		MbPets.getInstance().getConfig()
+//				.set("disguiseTypes.DROPPED_ITEM.TNT.aliases", Arrays.asList("TNT", "SPRENGSTOFF"));
 //		MbPets.getInstance().getConfig().set("disguiseTypes.DROPPED_ITEM.FIRE.displaytext", "Feuer");
 //		MbPets.getInstance().getConfig()
 //				.set("disguiseTypes.DROPPED_ITEM.FIRE.aliases", Arrays.asList("FIRE", "FEUER"));
@@ -400,7 +404,7 @@ public class MbPetsConfig {
 		MbPets.getInstance()
 				.getConfig()
 				.set("rabbitTypes.PEPPER.aliases",
-						Arrays.asList("PEPPER", "PFEFFER", "SALZPFEFFER",
+						Arrays.asList("PEPPER", "SALT_AND_PEPPER", "PFEFFER", "SALZPFEFFER",
 								"PFEFFERSALZ"));
 		MbPets.getInstance().getConfig().set("rabbitTypes.WHITE.displaytext", "Weiﬂ");
 		MbPets.getInstance()
@@ -464,6 +468,7 @@ public class MbPetsConfig {
 		MbPets.getInstance().getConfig().set("prices.SLIME", 20000);
 		MbPets.getInstance().getConfig().set("prices.MAGMA_CUBE", 30000);
 		MbPets.getInstance().getConfig().set("prices.FALLING_BLOCK", 25000);
+		MbPets.getInstance().getConfig().set("prices.PRIMED_TNT", 25000);
 		// price for modifying
 		MbPets.getInstance().getConfig().set("prices.MODIFY", 1000);
 		// percentage for selling
@@ -492,6 +497,7 @@ public class MbPetsConfig {
 		MbPets.getInstance().getConfig().set("damage.SLIME", 4);
 		MbPets.getInstance().getConfig().set("damage.MAGMA_CUBE", 5);
 		MbPets.getInstance().getConfig().set("damage.FALLING_BLOCK", 5);
+		MbPets.getInstance().getConfig().set("damage.PRIMED_TNT", 5);
 		// price for modifying
 		MbPets.getInstance().saveConfig();
 	}
@@ -690,7 +696,7 @@ public class MbPetsConfig {
 	 * {COLOR} are converted to the ChatColor equivalent. e.g.: {RED} is
 	 * replaced by ChatColor.RED
 	 * 
-	 * @param string
+	 * @param key
 	 * @return
 	 */
 	public static String getTextNode(String key) {
@@ -780,7 +786,7 @@ public class MbPetsConfig {
 	/**
 	 * returns an Material from the chat input given. e.g. /pet ... style ...
 	 * 
-	 * @param type
+	 * @param itemStack
 	 * @return
 	 */
 	public static Material parseMaterial(String itemStack) {
@@ -988,7 +994,7 @@ public class MbPetsConfig {
 		List<String> strings = new ArrayList<String>();
 		for (RabbitType style : RabbitType.values()) {
 			String typ = MbPets.getInstance().getConfig()
-				.getString("rabbitStyles." + style.name() + ".displaytext"); 
+				.getString("rabbitTypes." + style.name() + ".displaytext");
 			if (typ != null) {
 				strings.add(typ);
 			}

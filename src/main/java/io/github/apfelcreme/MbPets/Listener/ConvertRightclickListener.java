@@ -2,34 +2,16 @@ package io.github.apfelcreme.MbPets.Listener;
 
 import io.github.apfelcreme.MbPets.MbPets;
 import io.github.apfelcreme.MbPets.MbPetsConfig;
-import io.github.apfelcreme.MbPets.Pets.ChickenPet;
-import io.github.apfelcreme.MbPets.Pets.CowPet;
-import io.github.apfelcreme.MbPets.Pets.HorsePet;
-import io.github.apfelcreme.MbPets.Pets.IronGolemPet;
-import io.github.apfelcreme.MbPets.Pets.MooshroomPet;
-import io.github.apfelcreme.MbPets.Pets.OcelotPet;
-import io.github.apfelcreme.MbPets.Pets.Pet;
-import io.github.apfelcreme.MbPets.Pets.PigPet;
-import io.github.apfelcreme.MbPets.Pets.SheepPet;
-import io.github.apfelcreme.MbPets.Pets.SkeletonHorsePet;
-import io.github.apfelcreme.MbPets.Pets.SlimePet;
-import io.github.apfelcreme.MbPets.Pets.UndeadHorsePet;
-import io.github.apfelcreme.MbPets.Pets.WolfPet;
+import io.github.apfelcreme.MbPets.Pets.*;
 
 import java.util.HashMap;
 import java.util.HashSet;
 
 import me.libraryaddict.disguise.disguisetypes.DisguiseType;
 
+import me.libraryaddict.disguise.disguisetypes.RabbitType;
 import org.bukkit.ChatColor;
-import org.bukkit.entity.Ageable;
-import org.bukkit.entity.Horse;
-import org.bukkit.entity.Ocelot;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Sheep;
-import org.bukkit.entity.Slime;
-import org.bukkit.entity.Tameable;
-import org.bukkit.entity.Wolf;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -194,14 +176,16 @@ public class ConvertRightclickListener implements Listener {
 								!((Ageable)e.getRightClicked()).isAdult());
 						break;
 					case RABBIT:
-						e.getPlayer().sendMessage(ChatColor.GREEN+"Hasen können noch nicht konvertiert werden! Folgt später.");
-						registeredConverts.remove(e.getPlayer());
-						timers.get(e.getPlayer()).cancel();
-						return;
-						//TODO: Warten, bis man von Rabbits die Farbe auslesen kann >.>
-						//pet.setBaby(!((Ageable) e.getRightClicked()).isAdult());
-						//pet.setColor(MbPets.parseRabbitType(((Rabbit) e.getRightClicked())
-						//	.getRabbitType().name()));
+						for (RabbitType rabbitType : RabbitType.values()) {
+							System.out.println(rabbitType.name());
+						}
+						System.out.println(((Rabbit)e.getRightClicked()).getRabbitType().name());
+						pet = new RabbitPet(e.getPlayer(),
+								e.getRightClicked().getCustomName(),
+								MbPets.getLatestPetNumber(e.getPlayer()) +1,
+								!((Ageable)e.getRightClicked()).isAdult(),
+								MbPetsConfig.parseRabbitType(((Rabbit) e.getRightClicked()).getRabbitType().name()));
+						break;
 					case MUSHROOM_COW:
 						pet = new MooshroomPet(e.getPlayer(), 
 								e.getRightClicked().getCustomName(), 
@@ -214,7 +198,6 @@ public class ConvertRightclickListener implements Listener {
 								MbPets.getLatestPetNumber(e.getPlayer()) +1);
 						break;
 					case SLIME:
-						System.out.println(((Slime)e.getRightClicked()).getSize());
 						pet = new SlimePet(e.getPlayer(), 
 								e.getRightClicked().getCustomName(), 
 								MbPets.getLatestPetNumber(e.getPlayer()) +1, ((Slime)e.getRightClicked()).getSize());

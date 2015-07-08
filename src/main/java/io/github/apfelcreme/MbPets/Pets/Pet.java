@@ -9,6 +9,7 @@ import io.github.apfelcreme.MbPets.MbPetsConfig;
 import io.github.apfelcreme.MbPets.Interfaces.DroppedItem;
 import io.github.apfelcreme.MbPets.Interfaces.FallingBlock;
 import io.github.apfelcreme.MbPets.Tasks.FollowTask;
+import me.libraryaddict.disguise.LibsDisguises;
 import net.milkbowl.vault.economy.EconomyResponse;
 
 import org.bukkit.ChatColor;
@@ -192,8 +193,10 @@ public abstract class Pet {
 				}
 				if (thisPet instanceof DroppedItem) {
 					disguise = new MiscDisguise(DisguiseType.DROPPED_ITEM);
-				} else if ( thisPet instanceof FallingBlock) {
+				} else if (thisPet instanceof FallingBlock) {
 					disguise = new MiscDisguise(DisguiseType.FALLING_BLOCK);
+				} else if (thisPet instanceof PrimedTnTPet) {
+					disguise = new MiscDisguise(DisguiseType.PRIMED_TNT);
 				} else {
 					disguise = new MobDisguise(type);
 				} 
@@ -245,8 +248,7 @@ public abstract class Pet {
 	
 	/**
 	 * removes the pet from the database
-	 * 
-	 * @param connection
+	 *
 	 */
 	public void delete() {
 		MbPets.getInstance().getServer().getScheduler()

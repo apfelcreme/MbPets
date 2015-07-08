@@ -157,16 +157,22 @@ public class ChatInput {
 	public void setTargetPlayer(OfflinePlayer targetPlayer) {
 		this.targetPlayer = targetPlayer;
 	}
-	
+
 	@Override
 	public String toString() {
-		return "ChatInput [operation=" + operation + ", type=" + type
-				+ ", style=" + style + ", color=" + color + ", name=" + name
-				+ ", baby=" + baby + ", size=" + size + ", number=" + number
-				+ ", sender=" + sender + ", targetPlayer=" + targetPlayer + "]";
+		return "ChatInput{" +
+				"operation=" + operation +
+				", type='" + type + '\'' +
+				", style='" + style + '\'' +
+				", color='" + color + '\'' +
+				", name='" + name + '\'' +
+				", baby='" + baby + '\'' +
+				", size='" + size + '\'' +
+				", number=" + number +
+				", sender=" + sender +
+				", targetPlayer=" + targetPlayer +
+				'}';
 	}
-
-
 
 	public enum Operation {
 		RELOAD, REGENERATE, //Admins
